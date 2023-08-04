@@ -15,6 +15,7 @@ package dev.jakartalemon.cli.project;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.JsonObject;
 
@@ -22,14 +23,13 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.logging.Logger;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
  */
+@Slf4j
 public class CreateHexagonalProject {
-
-    private static final Logger LOGGER = Logger.getLogger(CreateHexagonalProject.class.getName());
 
     private CreateHexagonalProject() {
     }
@@ -38,49 +38,68 @@ public class CreateHexagonalProject {
         return CreateHexagonalProjectHolder.INSTANCE;
     }
 
-    public Optional<JsonObject> createProject(Path projectPath, String groupId, String artifactId) {
+    public Optional<JsonObject> createProject(Path projectPath,
+        String groupId,
+        String artifactId) {
         var version = "1.0-SNAPSHOT";
-        PomUtil.getInstance().createPom(projectPath,
-            List.of("domain", "application", "infrastructure"),
-            null, groupId,
-            artifactId, version,
-            "pom",
-            null,
-            Map.of(
+        var projectPom = PomModel.builder().groupId(groupId).artifactId(artifactId).version(version)
+            .packaging("pom")
+            .modules(List.of("domain", "application", "infrastructure"))
+            .properties(Map.of(
                 "project.build.sourceEncoding", "UTF-8",
                 "maven.compiler.release", "17",
                 "mockito.junit.jupiter.version", "5.4.0",
                 "org.projectlombok.version", "1.18.28",
                 "org.mapstruct.version", "1.5.5.Final"
-            )
+            ));
+        PomUtil.getInstance().createPom(projectPath, projectPom.build()
         );
 
-        createDomainModule(projectPath.resolve("domain"), groupId, artifactId, version);
+        createDomainModule(projectPath, groupId, artifactId, version);
+        createApplicationModule(projectPath, groupId, artifactId, version);
         return Optional.empty();
     }
 
-    private void createDomainModule(Path modulePath, String groupId, String artifactId,
+    private void createDomainModule(Path projectPath,
+        String groupId,
+        String artifactId,
         String version) {
-        PomUtil.getInstance().createPom(
-            modulePath,
+
+        var modulePom = PomModel.builder().parent(Map.of(
+            "groupId", groupId,
+            "artifactId", artifactId,
+            "version", version
+        )).packaging("jar").dependencies(List.of(
             Map.of(
+                "groupId", "org.projectlombok",
+                "artifactId", "lombok",
+                "version", "${org.projectlombok.version}"
+            )
+        )).properties(Map.of(
+            "maven.compiler.release", "17"
+        )).artifactId("domain");
+
+        var pomPath = PomUtil.getInstance().createPom(
+            projectPath.resolve("domain"), modulePom.build()
+        );
+        log.debug("domain created at {}", pomPath.orElse(null));
+    }
+
+    private void createApplicationModule(Path projectPath,
+        String groupId,
+        String artifactId,
+        String version) {
+        var modulePom = PomModel.builder()
+            .parent(Map.of(
                 "groupId", groupId,
                 "artifactId", artifactId,
-                "version", version
-            ),
-            "domain",
-            "jar",
-            List.of(
-                Map.of(
-                    "groupId", "org.projectlombok",
-                    "artifactId", "lombok",
-                    "version", "${org.projectlombok.version}"
-                )
-            ),
-            Map.of(
-                "maven.compiler.release", "17"
-            )
-        );
+                "version", version)
+            ).artifactId(artifactId)
+            .packaging("pom")
+            .modules(List.of("repository", "service"));
+        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve("application"),
+            modulePom.build());
+        log.debug("domain created at {}", pomPath.orElse(null));
     }
 
     private static class CreateHexagonalProjectHolder {

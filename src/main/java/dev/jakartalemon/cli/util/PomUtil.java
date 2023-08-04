@@ -15,24 +15,21 @@
  */
 package dev.jakartalemon.cli.util;
 
+import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.util.DocumentXmlUtil.ElementBuilder;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
  */
+@Slf4j
 public class PomUtil {
-
-    private static final Logger LOGGER = Logger.getLogger(PomUtil.class.getName());
 
     private PomUtil() {
     }
@@ -41,26 +38,15 @@ public class PomUtil {
         return PomUtilHolder.INSTANCE;
     }
 
-    public void createPom(Path modulePath, Map<String, String> parentMap, String artifactId,
-        String packaging, List<Map<String, String>> dependenciesList,
-        Map<String, String> propertiesMap) {
-        createPom(modulePath, null, parentMap, null, artifactId, null, packaging, dependenciesList,
-            propertiesMap);
-    }
-
     /**
      *
-     * @param modulePath       the value of modulePath
-     * @param modulesList          the value of modulesList
-     * @param parentMap      the value of parentMap
-     * @param groupId        the value of groupId
-     * @param artifactId       the value of artifactId
-     * @param version        the value of version
-     * @param packaging the value of packaging
-     * @param dependenciesList    the value of dependenciesList
-     * @param propertiesMap the value of propertiesMap
+     * @param modulePath the value of modulePath
+     * @param pomModel
+     *
+     * @return
      */
-    public void createPom(Path modulePath, List<String> modulesList, Map<String, String> parentMap, String groupId, String artifactId, String version, String packaging, List<Map<String, String>> dependenciesList, Map<String, String> propertiesMap) {
+    public Optional<Path> createPom(Path modulePath,
+        PomModel pomModel) {
         try {
             Files.createDirectories(modulePath);
             var pomPath = modulePath.resolve("pom.xml");
@@ -69,27 +55,35 @@ public class PomUtil {
                 .addAttribute("xmlns", "http://maven.apache.org/POM/4.0.0")
                 .addAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
                 .addAttribute("xsi:schemaLocation",
-                    "http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd")
-                .addChild(ElementBuilder.newInstance("modelVersion")
-                    .setTextContent("4.0.0"));
+                    "http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd");
+            Optional.ofNullable(pomModel.getModelVersion()).ifPresent(
+                modelVersion -> projectElemBuilder.addChild(ElementBuilder.newInstance(
+                    "modelVersion")
+                    .setTextContent(modelVersion)));
             //creando groupId
-            Optional.ofNullable(groupId).ifPresent(grpId -> projectElemBuilder.addChild(ElementBuilder.newInstance("groupId")
-                .setTextContent(grpId)));
+            Optional.ofNullable(pomModel.getGroupId()).ifPresent(groupId -> projectElemBuilder.
+                addChild(
+                    ElementBuilder.newInstance("groupId")
+                        .setTextContent(groupId)));
             //creando parent
-            Optional.ofNullable(parentMap).ifPresent(parent -> {
+            Optional.ofNullable(pomModel.getParent()).ifPresent(parent -> {
                 var parentElementBuilder = ElementBuilder.newInstance("parent");
                 projectElemBuilder.addChild(parentElementBuilder);
                 parent.forEach(
                     (key, value) -> parentElementBuilder.addChild(ElementBuilder.newInstance(key)
                         .setTextContent(value)));
             });
-            Optional.ofNullable(version).ifPresent(ver -> projectElemBuilder.addChild(ElementBuilder.newInstance("version")
-                .setTextContent(ver)));
+            Optional.ofNullable(pomModel.getVersion()).ifPresent(version -> projectElemBuilder.
+                addChild(
+                    ElementBuilder.newInstance("version")
+                        .setTextContent(version)));
             projectElemBuilder
-                .addChild(ElementBuilder.newInstance("artifactId").setTextContent(artifactId))
-                .addChild(ElementBuilder.newInstance("packaging").setTextContent(packaging));
+                .addChild(ElementBuilder.newInstance("artifactId").setTextContent(pomModel.
+                    getArtifactId()))
+                .addChild(ElementBuilder.newInstance("packaging").setTextContent(pomModel.
+                    getPackaging()));
             //creando modules
-            Optional.ofNullable(modulesList).ifPresent(modules -> {
+            Optional.ofNullable(pomModel.getModules()).ifPresent(modules -> {
                 var modulesElementBuilder = ElementBuilder.newInstance("modules");
                 projectElemBuilder.addChild(modulesElementBuilder);
                 modules.forEach(module -> modulesElementBuilder.addChild(
@@ -97,7 +91,7 @@ public class PomUtil {
                 ));
             });
             //creando dependencias
-            Optional.ofNullable(dependenciesList).ifPresent(dependencies -> {
+            Optional.ofNullable(pomModel.getDependencies()).ifPresent(dependencies -> {
                 var dependenciesElementBuilder = ElementBuilder.newInstance("dependencies");
                 projectElemBuilder.addChild(dependenciesElementBuilder);
 
@@ -111,7 +105,7 @@ public class PomUtil {
                 });
             });
             //creando properties
-            Optional.ofNullable(propertiesMap).ifPresent(properties -> {
+            Optional.ofNullable(pomModel.getProperties()).ifPresent(properties -> {
                 var propsElementBuilder = ElementBuilder.newInstance("properties");
                 projectElemBuilder.addChild(propsElementBuilder);
                 properties.forEach(
@@ -120,10 +114,12 @@ public class PomUtil {
             });
             pomXml.appendChild(projectElemBuilder.build(pomXml));
             DocumentXmlUtil.saveDocument(pomPath, pomXml);
-            LOGGER.info("%s saved".formatted(pomPath.toAbsolutePath()));
+            log.info("{} saved", pomPath.toAbsolutePath());
+            return Optional.ofNullable(pomPath);
         } catch (IOException | ParserConfigurationException ex) {
-            LOGGER.log(Level.SEVERE, null, ex);
+            log.error(ex.getMessage(), ex);
         }
+        return Optional.empty();
 
     }
 
