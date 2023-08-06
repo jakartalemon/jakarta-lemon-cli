@@ -17,12 +17,12 @@ package dev.jakartalemon.cli.project;
 
 import dev.jakartalemon.cli.JakartaLemonCli;
 import dev.jakartalemon.cli.project.constants.Archetype;
-import jakarta.json.JsonObject;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.lang3.StringUtils;
 import picocli.CommandLine;
 
 /**
@@ -58,6 +58,12 @@ public class CreateProjectCommand implements Runnable {
     private String groupId;
 
     @CommandLine.Option(
+        names = {"-p", "--package"},
+        descriptionKey = "project.package"
+    )
+    private String packageName;
+
+    @CommandLine.Option(
         names = {"-v", "--verbose"},
         descriptionKey = "options.verbose"
     )
@@ -82,13 +88,20 @@ public class CreateProjectCommand implements Runnable {
                 LOGGER.info(String.format("%s created", created));
             }
             var archetype = Archetype.valueOf(archetypeOption.toUpperCase());
+            if (StringUtils.isBlank(packageName)) {
+                packageName = groupId + '.' + artifactId;
+            }
             switch (archetype) {
-                case HEXA:
+                case HEXA -> {
                     var projectInfo = CreateHexagonalProject.getInstance()
-                        .createProject(created, groupId, artifactId);
-                    break;
-                default:
-                    throw new AssertionError();
+                        .createProject(created, groupId, artifactId, packageName);
+                }
+                case JSF -> {
+                }
+                case MVC -> {
+                }
+                case REST -> {
+                }
             }
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, null, ex);

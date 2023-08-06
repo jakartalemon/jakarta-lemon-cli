@@ -17,13 +17,13 @@ package dev.jakartalemon.cli.util;
 
 import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.util.DocumentXmlUtil.ElementBuilder;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
@@ -39,10 +39,8 @@ public class PomUtil {
     }
 
     /**
-     *
      * @param modulePath the value of modulePath
      * @param pomModel
-     *
      * @return
      */
     public Optional<Path> createPom(Path modulePath,
@@ -55,7 +53,8 @@ public class PomUtil {
                 .addAttribute("xmlns", "http://maven.apache.org/POM/4.0.0")
                 .addAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
                 .addAttribute("xsi:schemaLocation",
-                    "http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd");
+                    "http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0"
+                    + ".xsd");
             Optional.ofNullable(pomModel.getModelVersion()).ifPresent(
                 modelVersion -> projectElemBuilder.addChild(ElementBuilder.newInstance(
                     "modelVersion")
@@ -120,6 +119,27 @@ public class PomUtil {
             log.error(ex.getMessage(), ex);
         }
         return Optional.empty();
+
+    }
+
+    public void createJavaProjectStructure(Path sourcePath, String... packagesName) {
+        try {
+            var created
+                = Files.createDirectories(sourcePath.resolve("src").resolve("main").resolve("java"));
+            Files.createDirectories(sourcePath.resolve("src").resolve("main").resolve("resources"));
+            Files.createDirectories(sourcePath.resolve("src").resolve("test").resolve("java"));
+            Files.createDirectories(sourcePath.resolve("src").resolve("test").resolve("resources"));
+            for (var packageName : packagesName) {
+                var packagesDir = packageName.split("\\.");
+                var packagePath = created;
+                for (var packageDir : packagesDir) {
+                    packagePath = packagePath.resolve(packageDir);
+                }
+                Files.createDirectories(packagePath);
+            }
+        } catch (IOException ex) {
+            log.error(ex.getMessage(), ex);
+        }
 
     }
 

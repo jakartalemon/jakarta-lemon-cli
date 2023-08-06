@@ -38,9 +38,7 @@ public class CreateHexagonalProject {
         return CreateHexagonalProjectHolder.INSTANCE;
     }
 
-    public Optional<JsonObject> createProject(Path projectPath,
-        String groupId,
-        String artifactId) {
+    public Optional<JsonObject> createProject(Path projectPath, String groupId, String artifactId, String packageName) {
         var version = "1.0-SNAPSHOT";
         var projectPom = PomModel.builder().groupId(groupId).artifactId(artifactId).version(version)
             .packaging("pom")
@@ -55,15 +53,12 @@ public class CreateHexagonalProject {
         PomUtil.getInstance().createPom(projectPath, projectPom.build()
         );
 
-        createDomainModule(projectPath, groupId, artifactId, version);
-        createApplicationModule(projectPath, groupId, artifactId, version);
+        createDomainModule(projectPath, groupId, artifactId, version, packageName);
+        createApplicationModule(projectPath, groupId, artifactId, version, packageName);
         return Optional.empty();
     }
 
-    private void createDomainModule(Path projectPath,
-        String groupId,
-        String artifactId,
-        String version) {
+    private void createDomainModule(Path projectPath, String groupId, String artifactId, String version, String packageName) {
 
         var modulePom = PomModel.builder().parent(Map.of(
             "groupId", groupId,
@@ -82,25 +77,97 @@ public class CreateHexagonalProject {
         var pomPath = PomUtil.getInstance().createPom(
             projectPath.resolve("domain"), modulePom.build()
         );
-        log.debug("domain created at {}", pomPath.orElse(null));
+        pomPath.ifPresent(pom -> {
+            log.debug("domain created at {}", pom);
+            var parent = pom.getParent();
+            PomUtil.getInstance().createJavaProjectStructure(parent, packageName + ".domain.dao");
+            PomUtil.getInstance().createJavaProjectStructure(parent, packageName + ".domain.model");
+            PomUtil.getInstance().createJavaProjectStructure(parent, packageName + ".domain.service");
+        });
     }
 
-    private void createApplicationModule(Path projectPath,
-        String groupId,
-        String artifactId,
-        String version) {
+    private void createApplicationModule(Path projectPath, String groupId, String artifactId, String version, String packageName) {
         var modulePom = PomModel.builder()
             .parent(Map.of(
                 "groupId", groupId,
                 "artifactId", artifactId,
                 "version", version)
-            ).artifactId(artifactId)
+            ).artifactId("application")
             .packaging("pom")
             .modules(List.of("repository", "service"));
         var pomPath = PomUtil.getInstance().createPom(projectPath.resolve("application"),
             modulePom.build());
-        log.debug("domain created at {}", pomPath.orElse(null));
+        pomPath.ifPresent(pom -> {
+            log.debug("application created at {}", pom);
+            createApplicationRepositoryModule(pom.getParent(), groupId, artifactId, version, packageName);
+            createApplicationServiceModule(pom.getParent(), groupId, artifactId, version, packageName);
+        });
     }
+
+    private void createApplicationRepositoryModule(Path projectPath, String groupId, String artifactId, String version, String packageName) {
+        var modulePom = PomModel.builder()
+            .parent(Map.of("groupId", groupId,
+                "artifactId", artifactId,
+                "version", version
+            ))
+            .artifactId("repository")
+            .packaging("jar")
+            .dependencies(List.of(
+                Map.of(
+                    "groupId", "${project.groupId}",
+                    "artifactId", "domain",
+                    "version", "${project.version}"
+                )
+            ))
+            .properties(
+                Map.of("maven.compiler.release", "17")
+            );
+        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve("repository"),
+            modulePom.build());
+
+        pomPath.ifPresent(pom -> {
+            log.debug("repository created at {}", pom);
+            PomUtil.getInstance().createJavaProjectStructure(pom.getParent(), packageName);
+        });
+    }
+    private void createApplicationServiceModule(Path projectPath, String groupId, String artifactId, String version, String packageName) {
+        var modulePom = PomModel.builder()
+            .parent(Map.of("groupId", groupId,
+                "artifactId", artifactId,
+                "version", version
+            ))
+            .artifactId("repository")
+            .packaging("jar")
+            .dependencies(List.of(
+                Map.of(
+                    "groupId", "${project.groupId}",
+                    "artifactId", "domain",
+                    "version", "${project.version}"
+                ),
+                Map.of(
+                    "groupId", "${project.groupId}",
+                    "artifactId", "repository",
+                    "version", "${project.version}"
+                ),
+                Map.of(
+                    "groupId", "jakarta.inject",
+                    "artifactId", "jakarta.inject-api",
+                    "version", "2.0.1",
+                    "scope","provided"
+                )
+            ))
+            .properties(
+                Map.of("maven.compiler.release", "17")
+            );
+        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve("service"),
+            modulePom.build());
+
+        pomPath.ifPresent(pom -> {
+            log.debug("repository created at {}", pom);
+            PomUtil.getInstance().createJavaProjectStructure(pom.getParent(), packageName);
+        });
+    }
+
 
     private static class CreateHexagonalProjectHolder {
 

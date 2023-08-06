@@ -20,5 +20,5 @@ package dev.jakartalemon.cli.project.constants;
  * @author Diego Silva <diego.silva at apuntesdejava.com>
  */
 public enum Archetype {
-    MVC,HEXA
+    MVC, HEXA, REST, JSF
 }
