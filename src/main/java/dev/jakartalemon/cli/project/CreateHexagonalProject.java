@@ -38,7 +38,10 @@ public class CreateHexagonalProject {
         return CreateHexagonalProjectHolder.INSTANCE;
     }
 
-    public Optional<JsonObject> createProject(Path projectPath, String groupId, String artifactId, String packageName) {
+    public Optional<JsonObject> createProject(Path projectPath,
+        String groupId,
+        String artifactId,
+        String packageName) {
         var version = "1.0-SNAPSHOT";
         var projectPom = PomModel.builder().groupId(groupId).artifactId(artifactId).version(version)
             .packaging("pom")
@@ -55,10 +58,15 @@ public class CreateHexagonalProject {
 
         createDomainModule(projectPath, groupId, artifactId, version, packageName);
         createApplicationModule(projectPath, groupId, artifactId, version, packageName);
+        createInfrastructureModule(projectPath, groupId, artifactId, version, packageName);
         return Optional.empty();
     }
 
-    private void createDomainModule(Path projectPath, String groupId, String artifactId, String version, String packageName) {
+    private void createDomainModule(Path projectPath,
+        String groupId,
+        String artifactId,
+        String version,
+        String packageName) {
 
         var modulePom = PomModel.builder().parent(Map.of(
             "groupId", groupId,
@@ -82,11 +90,16 @@ public class CreateHexagonalProject {
             var parent = pom.getParent();
             PomUtil.getInstance().createJavaProjectStructure(parent, packageName + ".domain.dao");
             PomUtil.getInstance().createJavaProjectStructure(parent, packageName + ".domain.model");
-            PomUtil.getInstance().createJavaProjectStructure(parent, packageName + ".domain.service");
+            PomUtil.getInstance().
+                createJavaProjectStructure(parent, packageName + ".domain.service");
         });
     }
 
-    private void createApplicationModule(Path projectPath, String groupId, String artifactId, String version, String packageName) {
+    private void createApplicationModule(Path projectPath,
+        String groupId,
+        String artifactId,
+        String version,
+        String packageName) {
         var modulePom = PomModel.builder()
             .parent(Map.of(
                 "groupId", groupId,
@@ -98,13 +111,19 @@ public class CreateHexagonalProject {
         var pomPath = PomUtil.getInstance().createPom(projectPath.resolve("application"),
             modulePom.build());
         pomPath.ifPresent(pom -> {
-            log.debug("application created at {}", pom);
-            createApplicationRepositoryModule(pom.getParent(), groupId, artifactId, version, packageName);
-            createApplicationServiceModule(pom.getParent(), groupId, artifactId, version, packageName);
+            log.debug("application created at {}", pom.toAbsolutePath());
+            createApplicationRepositoryModule(pom.getParent(), groupId, artifactId, version,
+                packageName);
+            createApplicationServiceModule(pom.getParent(), groupId, artifactId, version,
+                packageName);
         });
     }
 
-    private void createApplicationRepositoryModule(Path projectPath, String groupId, String artifactId, String version, String packageName) {
+    private void createApplicationRepositoryModule(Path projectPath,
+        String groupId,
+        String artifactId,
+        String version,
+        String packageName) {
         var modulePom = PomModel.builder()
             .parent(Map.of("groupId", groupId,
                 "artifactId", artifactId,
@@ -126,17 +145,22 @@ public class CreateHexagonalProject {
             modulePom.build());
 
         pomPath.ifPresent(pom -> {
-            log.debug("repository created at {}", pom);
+            log.debug("repository created at {}", pom.toAbsolutePath());
             PomUtil.getInstance().createJavaProjectStructure(pom.getParent(), packageName);
         });
     }
-    private void createApplicationServiceModule(Path projectPath, String groupId, String artifactId, String version, String packageName) {
+
+    private void createApplicationServiceModule(Path projectPath,
+        String groupId,
+        String artifactId,
+        String version,
+        String packageName) {
         var modulePom = PomModel.builder()
             .parent(Map.of("groupId", groupId,
                 "artifactId", artifactId,
                 "version", version
             ))
-            .artifactId("repository")
+            .artifactId("service")
             .packaging("jar")
             .dependencies(List.of(
                 Map.of(
@@ -153,7 +177,7 @@ public class CreateHexagonalProject {
                     "groupId", "jakarta.inject",
                     "artifactId", "jakarta.inject-api",
                     "version", "2.0.1",
-                    "scope","provided"
+                    "scope", "provided"
                 )
             ))
             .properties(
@@ -163,11 +187,153 @@ public class CreateHexagonalProject {
             modulePom.build());
 
         pomPath.ifPresent(pom -> {
-            log.debug("repository created at {}", pom);
+            log.debug("repository created at {}", pom.toAbsolutePath());
             PomUtil.getInstance().createJavaProjectStructure(pom.getParent(), packageName);
         });
     }
 
+    private void createInfrastructureModule(Path projectPath,
+        String groupId,
+        String artifactId,
+        String version,
+        String packageName) {
+        var modulePom = PomModel.builder()
+            .parent(Map.of("groupId", groupId,
+                "artifactId", artifactId,
+                "version", version
+            ))
+            .artifactId("infrastructure")
+            .packaging("pom")
+            .modules(
+                List.of(
+                    "dto", "mapper", "ports"
+                )
+            );
+        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve("infrastructure"),
+            modulePom.build());
+
+        pomPath.ifPresent(pom -> {
+            log.debug("infrastructure created at {}", pom.toAbsolutePath());
+            createDtoInfrastructureModule(pom.getParent(), groupId, "infrastructure", version,
+                packageName);
+            createMapperInfrastructureModule(pom.getParent(), groupId, "infrastructure", version,
+                packageName);
+            createPortsInfrastructureModule(pom.getParent(), groupId, "infrastructure", version,
+                packageName);
+        });
+    }
+
+    private void createDtoInfrastructureModule(Path projectPath,
+        String groupId,
+        String artifactId,
+        String version,
+        String packageName) {
+        var modulePom = PomModel.builder()
+            .parent(Map.of("groupId", groupId,
+                "artifactId", artifactId,
+                "version", version
+            ))
+            .artifactId("dto")
+            .packaging("jar")
+            .dependencies(
+                List.of(
+                    Map.of(
+                        "groupId", "org.projectlombok",
+                        "artifactId", "lombok",
+                        "version", "${org.projectlombok.version}"
+                    )
+                )
+            ).properties(
+                Map.of("maven.compiler.release", "17")
+            );
+        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve("dto"),
+            modulePom.build());
+        pomPath.ifPresent(pom -> {
+            log.debug("dto created at {}", pom.toAbsolutePath());
+            PomUtil.getInstance().createJavaProjectStructure(pom.getParent(), "%s.%s.dto".formatted(
+                packageName, artifactId));
+        });
+    }
+
+    private void createMapperInfrastructureModule(Path projectPath,
+        String groupId,
+        String artifactId,
+        String version,
+        String packageName) {
+        var modulePom = PomModel.builder()
+            .parent(Map.of("groupId", groupId,
+                "artifactId", artifactId,
+                "version", version
+            ))
+            .artifactId("mapper")
+            .packaging("jar")
+            .dependencies(
+                List.of(
+                    Map.of(
+                        "groupId", "org.mapstruct",
+                        "artifactId", "mapstruct",
+                        "version", "${org.mapstruct.version}"
+                    ),
+                    Map.of(
+                        "groupId", "${project.groupId}",
+                        "artifactId", "domain",
+                        "version", "${project.version}"
+                    ),
+                    Map.of(
+                        "groupId", "${project.groupId}",
+                        "artifactId", "dto",
+                        "version", "${project.version}"
+                    ),
+                    Map.of(
+                        "groupId", "org.mockito",
+                        "artifactId", "mockito-junit-jupiter",
+                        "version", "${mockito.junit.jupiter.version}",
+                        "scope","test"
+                    )
+                )
+            ).properties(
+                Map.of("maven.compiler.release", "17")
+            );
+        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve("mapper"),
+            modulePom.build());
+        pomPath.ifPresent(pom -> {
+            log.debug("mapper created at {}", pom.toAbsolutePath());
+            PomUtil.getInstance().createJavaProjectStructure(pom.getParent(), "%s.%s.mapper".formatted(
+                packageName, artifactId));
+        });
+    }
+
+    private void createPortsInfrastructureModule(Path projectPath,
+        String groupId,
+        String artifactId,
+        String version,
+        String packageName) {
+        var modulePom = PomModel.builder()
+            .parent(Map.of("groupId", groupId,
+                "artifactId", artifactId,
+                "version", version
+            ))
+            .artifactId("ports")
+            .packaging("jar")
+            .dependencies(
+                List.of(
+                    Map.of(
+                        "groupId", "org.projectlombok",
+                        "artifactId", "lombok",
+                        "version", "${org.projectlombok.version}"
+                    )
+                )
+            ).properties(
+                Map.of("maven.compiler.release", "17")
+            );
+        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve("ports"),
+            modulePom.build());
+        pomPath.ifPresent(pom -> {
+            log.debug("ports created at {}", pom.toAbsolutePath());
+            PomUtil.getInstance().createJavaProjectStructure(pom.getParent(), "%s.%s.ports".formatted(
+                packageName, artifactId));
+        });
+    }
 
     private static class CreateHexagonalProjectHolder {
 
