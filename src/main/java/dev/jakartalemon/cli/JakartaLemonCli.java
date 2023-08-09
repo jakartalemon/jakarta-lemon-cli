@@ -34,8 +34,7 @@ import picocli.CommandLine.HelpCommand;
     subcommands = {
         HelpCommand.class,
         CreateProjectCommand.class
-    },
-    helpCommand = true
+    }
 )
 public class JakartaLemonCli implements Callable<Integer> {
 
