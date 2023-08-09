@@ -130,9 +130,9 @@ public class CreateHexagonalProject {
             modulePom.build());
         pomPath.ifPresent(pom -> {
             log.debug("application created at {}", pom.toAbsolutePath());
-            createApplicationRepositoryModule(pom.getParent(), groupId, artifactId, version,
+            createApplicationRepositoryModule(pom.getParent(), groupId, APPLICATION, version,
                 packageName);
-            createApplicationServiceModule(pom.getParent(), groupId, artifactId, version,
+            createApplicationServiceModule(pom.getParent(), groupId, APPLICATION, version,
                 packageName);
         });
     }
