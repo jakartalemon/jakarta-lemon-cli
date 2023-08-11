@@ -41,4 +41,6 @@ public class PomModel {
     private Map<String, String> properties;
     private List<String> modules;
 
+    private BuildModel buildModel;
+
 }

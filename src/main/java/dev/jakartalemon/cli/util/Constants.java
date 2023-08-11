@@ -15,6 +15,8 @@
  */
 package dev.jakartalemon.cli.util;
 
+import java.util.Map;
+
 /**
  *
  * @author diego
@@ -40,4 +42,11 @@ public class Constants {
     public static final String SERVICE = "service";
     public static final String MAPPER = "mapper";
     public static final String JAVA_VERSION = "17";
+    public static final String ORG_MAPSTRUCT = "org.mapstruct";
+
+    public static final Map<String,String> LOMBOK_DEPENDENCY = Map.of(
+        GROUP_ID, "org.projectlombok",
+        ARTIFACT_ID, "lombok",
+        VERSION, "${org.projectlombok.version}"
+    );
 }

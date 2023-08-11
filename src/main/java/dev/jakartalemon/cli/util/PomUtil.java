@@ -17,6 +17,8 @@ package dev.jakartalemon.cli.util;
 
 import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.util.DocumentXmlUtil.ElementBuilder;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonValue;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -54,10 +56,10 @@ public class PomUtil {
                 .addAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
                 .addAttribute("xsi:schemaLocation",
                     "http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0"
-                    + ".xsd");
+                        + ".xsd");
             Optional.ofNullable(pomModel.getModelVersion()).ifPresent(
                 modelVersion -> projectElemBuilder.addChild(ElementBuilder.newInstance(
-                    "modelVersion")
+                        "modelVersion")
                     .setTextContent(modelVersion)));
             //creando groupId
             Optional.ofNullable(pomModel.getGroupId()).ifPresent(groupId -> projectElemBuilder.
@@ -111,10 +113,27 @@ public class PomUtil {
                     (key, value) -> propsElementBuilder.addChild(ElementBuilder.newInstance(key)
                         .setTextContent(value)));
             });
+            //creado seccion build
+            Optional.ofNullable(pomModel.getBuildModel()).ifPresent(build -> {
+                var buildElem = ElementBuilder.newInstance("build");
+                projectElemBuilder.addChild(buildElem);
+                Optional.ofNullable(build.getPlugins()).ifPresent(plugins -> {
+                    var pluginsElem = ElementBuilder.newInstance("plugins");
+                    buildElem.addChild(pluginsElem);
+                    plugins.stream().map(JsonValue::asJsonObject).forEach(plugin -> {
+                        var pluginElem = ElementBuilder.newInstance("plugin");
+                        pluginsElem.addChild(pluginElem);
+                        insertValues(plugin, pluginElem);
+
+                    });
+
+                });
+
+            });
             pomXml.appendChild(projectElemBuilder.build(pomXml));
             DocumentXmlUtil.saveDocument(pomPath, pomXml);
             log.info("{} saved", pomPath.toAbsolutePath());
-            return Optional.ofNullable(pomPath);
+            return Optional.of(pomPath);
         } catch (IOException | ParserConfigurationException ex) {
             log.error(ex.getMessage(), ex);
         }
@@ -122,10 +141,26 @@ public class PomUtil {
 
     }
 
+    private void insertValues(JsonObject jsonValues, ElementBuilder elementBuilder) {
+
+        var entrySet = jsonValues.entrySet();
+        entrySet.forEach(entry -> {
+            var element = ElementBuilder.newInstance(entry.getKey());
+            elementBuilder.addChild(element);
+            if (entry.getValue().getValueType() == JsonValue.ValueType.STRING)
+                element.setTextContent(jsonValues.getString(entry.getKey()));
+            else if (entry.getValue().getValueType() == JsonValue.ValueType.OBJECT) {
+                insertValues(jsonValues.getJsonObject(entry.getKey()), element);
+
+            }
+        });
+    }
+
     public void createJavaProjectStructure(Path sourcePath, String... packagesName) {
         try {
             var created
-                = Files.createDirectories(sourcePath.resolve("src").resolve("main").resolve("java"));
+                =
+                Files.createDirectories(sourcePath.resolve("src").resolve("main").resolve("java"));
             Files.createDirectories(sourcePath.resolve("src").resolve("main").resolve("resources"));
             Files.createDirectories(sourcePath.resolve("src").resolve("test").resolve("java"));
             Files.createDirectories(sourcePath.resolve("src").resolve("test").resolve("resources"));
