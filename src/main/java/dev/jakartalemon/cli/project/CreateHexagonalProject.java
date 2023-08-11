@@ -1,5 +1,3 @@
-package dev.jakartalemon.cli.project;
-
 /*
  * Copyright 2023 Diego Silva <diego.silva at apuntesdejava.com>.
  *
@@ -15,7 +13,20 @@ package dev.jakartalemon.cli.project;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package dev.jakartalemon.cli.project;
+
+import dev.jakartalemon.cli.model.BuildModel;
 import dev.jakartalemon.cli.model.PomModel;
+import dev.jakartalemon.cli.util.PomUtil;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import lombok.extern.slf4j.Slf4j;
+
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import static dev.jakartalemon.cli.util.Constants.APPLICATION;
 import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
 import static dev.jakartalemon.cli.util.Constants.DOMAIN;
@@ -24,8 +35,10 @@ import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
 import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
 import static dev.jakartalemon.cli.util.Constants.JAR;
 import static dev.jakartalemon.cli.util.Constants.JAVA_VERSION;
+import static dev.jakartalemon.cli.util.Constants.LOMBOK_DEPENDENCY;
 import static dev.jakartalemon.cli.util.Constants.MAPPER;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_RELEASE;
+import static dev.jakartalemon.cli.util.Constants.ORG_MAPSTRUCT;
 import static dev.jakartalemon.cli.util.Constants.POM;
 import static dev.jakartalemon.cli.util.Constants.PORTS;
 import static dev.jakartalemon.cli.util.Constants.PROJECT_GROUP_ID;
@@ -33,15 +46,6 @@ import static dev.jakartalemon.cli.util.Constants.PROJECT_VERSION;
 import static dev.jakartalemon.cli.util.Constants.REPOSITORY;
 import static dev.jakartalemon.cli.util.Constants.SERVICE;
 import static dev.jakartalemon.cli.util.Constants.VERSION;
-import dev.jakartalemon.cli.util.PomUtil;
-import jakarta.json.JsonObject;
-
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
@@ -54,6 +58,10 @@ public class CreateHexagonalProject {
 
     public static CreateHexagonalProject getInstance() {
         return CreateHexagonalProjectHolder.INSTANCE;
+    }
+
+    private static class CreateHexagonalProjectHolder {
+        private static final CreateHexagonalProject INSTANCE = new CreateHexagonalProject();
     }
 
     public Optional<JsonObject> createProject(Path projectPath,
@@ -91,11 +99,7 @@ public class CreateHexagonalProject {
             ARTIFACT_ID, artifactId,
             VERSION, version
         )).packaging(JAR).dependencies(List.of(
-            Map.of(
-                GROUP_ID, "org.projectlombok",
-                ARTIFACT_ID, "lombok",
-                VERSION, "${org.projectlombok.version}"
-            )
+            LOMBOK_DEPENDENCY
         )).properties(Map.of(
             MAVEN_COMPILER_RELEASE, JAVA_VERSION
         )).artifactId(DOMAIN);
@@ -130,21 +134,20 @@ public class CreateHexagonalProject {
             modulePom.build());
         pomPath.ifPresent(pom -> {
             log.debug("application created at {}", pom.toAbsolutePath());
-            createApplicationRepositoryModule(pom.getParent(), groupId, APPLICATION, version,
+            createApplicationRepositoryModule(pom.getParent(), groupId, version,
                 packageName);
-            createApplicationServiceModule(pom.getParent(), groupId, APPLICATION, version,
+            createApplicationServiceModule(pom.getParent(), groupId, version,
                 packageName);
         });
     }
 
     private void createApplicationRepositoryModule(Path projectPath,
         String groupId,
-        String artifactId,
         String version,
         String packageName) {
         var modulePom = PomModel.builder()
             .parent(Map.of(GROUP_ID, groupId,
-                ARTIFACT_ID, artifactId,
+                ARTIFACT_ID, dev.jakartalemon.cli.util.Constants.APPLICATION,
                 VERSION, version
             ))
             .artifactId(REPOSITORY)
@@ -170,12 +173,11 @@ public class CreateHexagonalProject {
 
     private void createApplicationServiceModule(Path projectPath,
         String groupId,
-        String artifactId,
         String version,
         String packageName) {
         var modulePom = PomModel.builder()
             .parent(Map.of(GROUP_ID, groupId,
-                ARTIFACT_ID, artifactId,
+                ARTIFACT_ID, dev.jakartalemon.cli.util.Constants.APPLICATION,
                 VERSION, version
             ))
             .artifactId(SERVICE)
@@ -286,7 +288,7 @@ public class CreateHexagonalProject {
             .dependencies(
                 List.of(
                     Map.of(
-                        GROUP_ID, "org.mapstruct",
+                        GROUP_ID, ORG_MAPSTRUCT,
                         ARTIFACT_ID, "mapstruct",
                         VERSION, "${org.mapstruct.version}"
                     ),
@@ -309,6 +311,23 @@ public class CreateHexagonalProject {
                 )
             ).properties(
                 Map.of(MAVEN_COMPILER_RELEASE, JAVA_VERSION)
+            ).buildModel(
+                BuildModel.builder()
+                    .plugins(Json.createArrayBuilder()
+                        .add(
+                            Json.createObjectBuilder()
+                                .add(GROUP_ID, "org.apache.maven.plugins")
+                                .add(ARTIFACT_ID, "maven-compiler-plugin")
+                                .add(VERSION, "3.11.0")
+                                .add("configuration", Json.createObjectBuilder()
+                                    .add("annotationProcessorPaths", Json.createObjectBuilder()
+                                        .add("path", Json.createObjectBuilder()
+                                            .add(GROUP_ID, ORG_MAPSTRUCT)
+                                            .add(ARTIFACT_ID, "mapstruct-processor")
+                                            .add(VERSION, "${org.mapstruct.version}")))
+                                )
+                        ).build()
+                    ).build()
             );
         var pomPath = PomUtil.getInstance().createPom(projectPath.resolve(MAPPER),
             modulePom.build());
@@ -333,11 +352,7 @@ public class CreateHexagonalProject {
             .packaging(JAR)
             .dependencies(
                 List.of(
-                    Map.of(
-                        GROUP_ID, "org.projectlombok",
-                        ARTIFACT_ID, "lombok",
-                        VERSION, "${org.projectlombok.version}"
-                    )
+                    LOMBOK_DEPENDENCY
                 )
             ).properties(
                 Map.of(MAVEN_COMPILER_RELEASE, JAVA_VERSION)
@@ -352,8 +367,4 @@ public class CreateHexagonalProject {
         });
     }
 
-    private static class CreateHexagonalProjectHolder {
-
-        private static final CreateHexagonalProject INSTANCE = new CreateHexagonalProject();
-    }
 }

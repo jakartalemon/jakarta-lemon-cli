@@ -17,16 +17,15 @@ package dev.jakartalemon.cli.project;
 
 import dev.jakartalemon.cli.JakartaLemonCli;
 import dev.jakartalemon.cli.project.constants.Archetype;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import picocli.CommandLine;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 /**
- *
  * @author Diego Silva <diego.silva at apuntesdejava.com>
  */
 @CommandLine.Command(
@@ -34,9 +33,8 @@ import picocli.CommandLine;
     resourceBundle = "messages",
     description = "Create Jakarta EE projects using some pattern indicated in the parameters."
 )
+@Slf4j
 public class CreateProjectCommand implements Runnable {
-
-    private static final Logger LOGGER = Logger.getLogger(CreateProjectCommand.class.getName());
 
     @CommandLine.Parameters(
         index = "0",
@@ -85,7 +83,7 @@ public class CreateProjectCommand implements Runnable {
             var projectPath = Path.of(projectName);
             var created = Files.createDirectories(projectPath);
             if (verbose) {
-                LOGGER.info(String.format("%s created", created));
+                log.info("{} created", created);
             }
             var archetype = Archetype.valueOf(archetypeOption.toUpperCase());
             if (StringUtils.isBlank(packageName)) {
@@ -104,7 +102,7 @@ public class CreateProjectCommand implements Runnable {
                 }
             }
         } catch (IOException ex) {
-            LOGGER.log(Level.SEVERE, null, ex);
+            log.error(ex.getMessage(), ex);
         }
     }
 

@@ -55,6 +55,10 @@ public class DocumentXmlUtil {
     private static final Logger LOGGER = Logger.getLogger(DocumentXmlUtil.class.getName());
     private static final String STRIP_XSL_FILE_NAME = "/xml/strip.xsl";
 
+    private DocumentXmlUtil() {
+
+    }
+
     /**
      * Creates a new XML object, with a root element given as a parameter.
      *
