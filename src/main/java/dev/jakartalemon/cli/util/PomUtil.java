@@ -27,6 +27,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
+import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
+import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
+import static dev.jakartalemon.cli.util.Constants.VERSION;
+
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
  */
@@ -64,7 +68,7 @@ public class PomUtil {
             //creando groupId
             Optional.ofNullable(pomModel.getGroupId()).ifPresent(groupId -> projectElemBuilder.
                 addChild(
-                    ElementBuilder.newInstance("groupId")
+                    ElementBuilder.newInstance(GROUP_ID)
                         .setTextContent(groupId)));
             //creando parent
             Optional.ofNullable(pomModel.getParent()).ifPresent(parent -> {
@@ -76,10 +80,10 @@ public class PomUtil {
             });
             Optional.ofNullable(pomModel.getVersion()).ifPresent(version -> projectElemBuilder.
                 addChild(
-                    ElementBuilder.newInstance("version")
+                    ElementBuilder.newInstance(VERSION)
                         .setTextContent(version)));
             projectElemBuilder
-                .addChild(ElementBuilder.newInstance("artifactId").setTextContent(pomModel.
+                .addChild(ElementBuilder.newInstance(ARTIFACT_ID).setTextContent(pomModel.
                     getArtifactId()))
                 .addChild(ElementBuilder.newInstance("packaging").setTextContent(pomModel.
                     getPackaging()));
