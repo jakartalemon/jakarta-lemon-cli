@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.jakartalemon.cli.project;
+package dev.jakartalemon.cli.project.hexa;
 
 import dev.jakartalemon.cli.model.BuildModel;
 import dev.jakartalemon.cli.model.PomModel;
@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static dev.jakartalemon.cli.project.constants.Archetype.HEXA;
 import static dev.jakartalemon.cli.util.Constants.APPLICATION;
 import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
 import static dev.jakartalemon.cli.util.Constants.DOMAIN;
@@ -38,7 +39,9 @@ import static dev.jakartalemon.cli.util.Constants.JAVA_VERSION;
 import static dev.jakartalemon.cli.util.Constants.LOMBOK_DEPENDENCY;
 import static dev.jakartalemon.cli.util.Constants.MAPPER;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_RELEASE;
+import static dev.jakartalemon.cli.util.Constants.MODEL;
 import static dev.jakartalemon.cli.util.Constants.ORG_MAPSTRUCT;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 import static dev.jakartalemon.cli.util.Constants.POM;
 import static dev.jakartalemon.cli.util.Constants.PORTS;
 import static dev.jakartalemon.cli.util.Constants.PROJECT_GROUP_ID;
@@ -61,6 +64,7 @@ public class CreateHexagonalProject {
     }
 
     private static class CreateHexagonalProjectHolder {
+
         private static final CreateHexagonalProject INSTANCE = new CreateHexagonalProject();
     }
 
@@ -79,16 +83,29 @@ public class CreateHexagonalProject {
                 "org.projectlombok.version", "1.18.28",
                 "org.mapstruct.version", "1.5.5.Final"
             ));
-        PomUtil.getInstance().createPom(projectPath, projectPom.build()
-        );
+        PomUtil.getInstance().createPom(projectPath, projectPom.build());
 
-        createDomainModule(projectPath, groupId, artifactId, version, packageName);
-        createApplicationModule(projectPath, groupId, artifactId, version, packageName);
-        createInfrastructureModule(projectPath, groupId, artifactId, version, packageName);
-        return Optional.empty();
+        var domainPath = createDomainModule(projectPath, groupId, artifactId, version, packageName);
+        var appPath
+            = createApplicationModule(projectPath, groupId, artifactId, version, packageName);
+        var infraPath = createInfrastructureModule(projectPath, groupId, artifactId, version,
+            packageName);
+        var projectInfo = Json.createObjectBuilder()
+            .add("archetype", HEXA.name())
+            .add(GROUP_ID, groupId)
+            .add(ARTIFACT_ID, artifactId)
+            .add(PACKAGE, packageName);
+        domainPath.ifPresent(domain -> projectInfo.add(DOMAIN, domain.getParent().toAbsolutePath().
+            toString()));
+        appPath.ifPresent(app -> projectInfo.add(APPLICATION, app.getParent().toAbsolutePath().
+            toString()));
+        infraPath.ifPresent(
+            infra -> projectInfo.add(INFRASTRUCTURE,
+                infra.getParent().toAbsolutePath().toString()));
+        return Optional.of(projectInfo.build());
     }
 
-    private void createDomainModule(Path projectPath,
+    private Optional<Path> createDomainModule(Path projectPath,
         String groupId,
         String artifactId,
         String version,
@@ -111,13 +128,15 @@ public class CreateHexagonalProject {
             log.debug("domain created at {}", pom);
             var parent = pom.getParent();
             PomUtil.getInstance().createJavaProjectStructure(parent, packageName + ".domain.dao");
-            PomUtil.getInstance().createJavaProjectStructure(parent, packageName + ".domain.model");
+            PomUtil.getInstance()
+                .createJavaProjectStructure(parent, packageName + "." + DOMAIN + "." + MODEL);
             PomUtil.getInstance().
                 createJavaProjectStructure(parent, packageName + ".domain.service");
         });
+        return pomPath;
     }
 
-    private void createApplicationModule(Path projectPath,
+    private Optional<Path> createApplicationModule(Path projectPath,
         String groupId,
         String artifactId,
         String version,
@@ -139,6 +158,7 @@ public class CreateHexagonalProject {
             createApplicationServiceModule(pom.getParent(), groupId, version,
                 packageName);
         });
+        return pomPath;
     }
 
     private void createApplicationRepositoryModule(Path projectPath,
@@ -212,7 +232,7 @@ public class CreateHexagonalProject {
         });
     }
 
-    private void createInfrastructureModule(Path projectPath,
+    private Optional<Path> createInfrastructureModule(Path projectPath,
         String groupId,
         String artifactId,
         String version,
@@ -241,6 +261,7 @@ public class CreateHexagonalProject {
             createPortsInfrastructureModule(pom.getParent(), groupId, version,
                 packageName);
         });
+        return pomPath;
     }
 
     private void createDtoInfrastructureModule(Path projectPath,

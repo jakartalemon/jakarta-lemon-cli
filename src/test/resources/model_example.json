@@ -1,0 +1,11 @@
+{
+    "Person": {
+        "firstName": "String",
+        "lastName": "String",
+        "birthdate": "LocalDate"
+    },
+    "Bank": {
+        "address": "String",
+        "name": "String"
+    }
+}

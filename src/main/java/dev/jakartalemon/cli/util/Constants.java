@@ -18,14 +18,15 @@ package dev.jakartalemon.cli.util;
 import java.util.Map;
 
 /**
- *
  * @author diego
  */
 public class Constants {
 
     private Constants() {
     }
+
     public static final String GROUP_ID = "groupId";
+    public static final String PACKAGE = "package";
     public static final String ARTIFACT_ID = "artifactId";
     public static final String VERSION = "version";
     public static final String APPLICATION = "application";
@@ -40,11 +41,17 @@ public class Constants {
     public static final String JAR = "jar";
     public static final String PORTS = "ports";
     public static final String SERVICE = "service";
+    public static final String MODEL = "model";
     public static final String MAPPER = "mapper";
     public static final String JAVA_VERSION = "17";
     public static final String ORG_MAPSTRUCT = "org.mapstruct";
 
-    public static final Map<String,String> LOMBOK_DEPENDENCY = Map.of(
+    public static final int TAB_SIZE = 4;
+
+    public static final Map<String, String> IMPORTABLES =
+        Map.of("LocalDate", "java.time.LocalDate");
+    public static final String PROJECT_INFO_JSON = "project_info.json";
+    public static final Map<String, String> LOMBOK_DEPENDENCY = Map.of(
         GROUP_ID, "org.projectlombok",
         ARTIFACT_ID, "lombok",
         VERSION, "${org.projectlombok.version}"

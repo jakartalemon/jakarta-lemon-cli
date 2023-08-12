@@ -17,6 +17,7 @@ package dev.jakartalemon.cli.project;
 
 import dev.jakartalemon.cli.JakartaLemonCli;
 import dev.jakartalemon.cli.project.constants.Archetype;
+import dev.jakartalemon.cli.project.hexa.CreateHexagonalProject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import picocli.CommandLine;
@@ -24,6 +25,8 @@ import picocli.CommandLine;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
+import static dev.jakartalemon.cli.util.Constants.PROJECT_INFO_JSON;
 
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
@@ -79,8 +82,8 @@ public class CreateProjectCommand implements Runnable {
     @Override
     public void run() {
         try {
-
             var projectPath = Path.of(projectName);
+            var projectInfoPath = projectPath.resolve(PROJECT_INFO_JSON);
             var created = Files.createDirectories(projectPath);
             if (verbose) {
                 log.info("{} created", created);
@@ -90,10 +93,15 @@ public class CreateProjectCommand implements Runnable {
                 packageName = groupId + '.' + artifactId;
             }
             switch (archetype) {
-                case HEXA -> {
-                    var projectInfo = CreateHexagonalProject.getInstance()
-                        .createProject(created, groupId, artifactId, packageName);
-                }
+                case HEXA -> CreateHexagonalProject.getInstance()
+                    .createProject(created, groupId, artifactId, packageName).ifPresent(
+                        projectInfo -> {
+                            try {
+                                Files.writeString(projectInfoPath, projectInfo.toString());
+                            } catch (IOException ex) {
+                                log.error(ex.getMessage(), ex);
+                            }
+                        });
                 case JSF -> {
                 }
                 case MVC -> {
