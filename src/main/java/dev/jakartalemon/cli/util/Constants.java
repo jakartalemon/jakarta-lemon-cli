@@ -48,8 +48,9 @@ public class Constants {
 
     public static final int TAB_SIZE = 4;
 
-    public static final Map<String, String> IMPORTABLES =
-        Map.of("LocalDate", "java.time.LocalDate");
+    public static final String JAKARTA_LEMON_HOST_BASE = "https://jakartalemon.dev";
+    public static final String JAKARTA_LEMON_CONFIG_URL = JAKARTA_LEMON_HOST_BASE + "/lemon-cli-config.json";
+
     public static final String PROJECT_INFO_JSON = "project_info.json";
     public static final Map<String, String> LOMBOK_DEPENDENCY = Map.of(
         GROUP_ID, "org.projectlombok",
