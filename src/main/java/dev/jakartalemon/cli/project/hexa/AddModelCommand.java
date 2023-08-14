@@ -32,10 +32,15 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 import static dev.jakartalemon.cli.util.Constants.DOMAIN;
-import static dev.jakartalemon.cli.util.Constants.IMPORTABLES;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_LEMON_CONFIG_URL;
 import static dev.jakartalemon.cli.util.Constants.MODEL;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
+import dev.jakartalemon.cli.util.HttpClientUtil;
+import jakarta.json.JsonReader;
+import java.net.URISyntaxException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
 
@@ -50,11 +55,27 @@ import static org.apache.commons.lang3.StringUtils.SPACE;
 @Slf4j
 public class AddModelCommand implements Callable<Integer> {
 
+    private static final String IMPORTABLES = "importables";
+
     @Parameters(
         paramLabel = "MODEL_DEFINITION.json",
         descriptionKey = "model_definition"
     )
     private File file;
+    private Map<String, String> importablesMap = new LinkedHashMap<>();
+
+    public AddModelCommand() throws InterruptedException {
+
+        try {
+            var config = HttpClientUtil.getJson(JAKARTA_LEMON_CONFIG_URL, JsonReader::readObject);
+            var importablesJson = config.getJsonObject(IMPORTABLES);
+            importablesJson.keySet().forEach(key -> importablesMap.put(key, importablesJson.
+                getString(key)));
+        } catch (IOException | URISyntaxException ex) {
+            log.error(ex.getMessage(), ex);
+
+        }
+    }
 
     @Override
     public Integer call() throws Exception {
@@ -103,8 +124,8 @@ public class AddModelCommand implements Callable<Integer> {
                 lines.
                     add("%s%s %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE), classType,
                         field));
-                if (IMPORTABLES.containsKey(classType)) {
-                    lines.add(4, "import %s;".formatted(IMPORTABLES.get(classType)));
+                if (importablesMap.containsKey(classType)) {
+                    lines.add(4, "import %s;".formatted(importablesMap.get(classType)));
                 }
             });
 

@@ -2,7 +2,7 @@
     "Person": {
         "firstName": "String",
         "lastName": "String",
-        "birthdate": "LocalDate"
+        "birthdate": "LocalDateTime"
     },
     "Bank": {
         "address": "String",
