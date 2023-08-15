@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 diego.
+ * Copyright 2023 Diego Silva mailto:diego.silva@apuntesdejava.com.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,52 +16,49 @@
 package dev.jakartalemon.cli.project.hexa;
 
 import dev.jakartalemon.cli.util.Constants;
+import static dev.jakartalemon.cli.util.Constants.DOMAIN;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE;
+import static dev.jakartalemon.cli.util.Constants.SERVICE;
+import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
+import dev.jakartalemon.cli.util.HttpClientUtil;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Parameters;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
-
-import static dev.jakartalemon.cli.util.Constants.DOMAIN;
-import static dev.jakartalemon.cli.util.Constants.MODEL;
-import static dev.jakartalemon.cli.util.Constants.PACKAGE;
-import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
-import dev.jakartalemon.cli.util.HttpClientUtil;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
+import picocli.CommandLine;
 
 /**
- * @author Diego Silva <diego.silva at apuntesdejava.com>
+ *
+ * @author Diego Silva mailto:diego.silva@apuntesdejava.com
  */
-@Command(
-    name = "addmodel",
+@CommandLine.Command(
+    name = "addservice",
     resourceBundle = "messages",
-    description = "Create a domain model. The model is given from the console in JSON format"
+    description = "Create a domain service. The service is given from the console in JSON format"
 )
 @Slf4j
-public class AddModelCommand implements Callable<Integer> {
+public class AddServiceCommand implements Callable<Integer> {
 
-    private final Map<String, String> importablesMap;
-
-    @Parameters(
-        paramLabel = "MODEL_DEFINITION.json",
-        descriptionKey = "model_definition"
+    @CommandLine.Parameters(
+        paramLabel = "SERVICE_DEFINITION.json",
+        descriptionKey = "service_definition"
     )
     private File file;
+    private Map<String, String> importablesMap;
 
-    public AddModelCommand() throws InterruptedException {
-
+    public AddServiceCommand() throws InterruptedException {
         importablesMap = HttpClientUtil.getConfigs(Constants.IMPORTABLES);
+
     }
 
     @Override
@@ -82,40 +79,32 @@ public class AddModelCommand implements Callable<Integer> {
             var structure = jsonReader.readObject();
             var projectInfo = projectInfoReader.readObject();
             structure.forEach(
-                (key, classDef) -> createClass(projectInfo, key, classDef.asJsonObject()));
+                (key, classDef) -> createServiceClass(projectInfo, key, classDef.asJsonObject()));
 
         }
 
         return 0;
     }
 
-    private void createClass(JsonObject projectInfo,
+    private void createServiceClass(JsonObject projectInfo,
         String className,
-        JsonObject classDef) {
+        JsonObject methodsDefinitions) {
         try {
-            log.info("Creating {} class", className);
+            log.info("Creating {} service class", className);
             List<String> lines = new ArrayList<>();
-            var packageName = "%s.%s.%s".formatted(projectInfo.getString(PACKAGE), DOMAIN, MODEL);
+            var packageName = "%s.%s.%s".formatted(projectInfo.getString(PACKAGE), DOMAIN, SERVICE);
             lines.add("package %s;".formatted(packageName));
             lines.add(EMPTY);
-            lines.add("import lombok.Getter;");
-            lines.add("import lombok.Setter;");
-            lines.add(EMPTY);
-            lines.add("@Setter");
-            lines.add("@Getter");
             lines.add("public class %s {".formatted(className));
-
-            //creating fields
-            classDef.keySet().forEach(field -> {
-                var classType = classDef.getString(field);
-                lines.
-                    add("%s%s %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE), classType,
-                        field));
-                if (importablesMap.containsKey(classType)) {
-                    lines.add(4, "import %s;".formatted(importablesMap.get(classType)));
-                }
+            lines.add(EMPTY);
+            methodsDefinitions.keySet().forEach(methodName -> {
+                var methodSignature = "%spublic void %s () {".formatted(StringUtils.repeat(SPACE,
+                    TAB_SIZE),
+                    methodName);
+                lines.add(methodSignature);
+                lines.add("%s}".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
+                lines.add(EMPTY);
             });
-
             lines.add("}");
 
             var classPackage = Path.of(projectInfo.getString(DOMAIN), "src", "main", "java");
@@ -129,6 +118,7 @@ public class AddModelCommand implements Callable<Integer> {
         } catch (IOException ex) {
             log.error(ex.getMessage(), ex);
         }
+
     }
 
 }

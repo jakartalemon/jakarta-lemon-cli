@@ -22,6 +22,8 @@ import java.util.Map;
  */
 public class Constants {
 
+    public static final String IMPORTABLES = "importables";
+
     private Constants() {
     }
 
@@ -41,7 +43,7 @@ public class Constants {
     public static final String JAR = "jar";
     public static final String PORTS = "ports";
     public static final String SERVICE = "service";
-    public static final String MODEL = "model";
+    public static final String MODEL = "model";    
     public static final String MAPPER = "mapper";
     public static final String JAVA_VERSION = "17";
     public static final String ORG_MAPSTRUCT = "org.mapstruct";

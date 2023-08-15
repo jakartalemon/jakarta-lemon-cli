@@ -15,7 +15,9 @@
  */
 package dev.jakartalemon.cli.util;
 
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_LEMON_CONFIG_URL;
 import jakarta.json.Json;
+import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
 
 import java.io.IOException;
@@ -25,6 +27,8 @@ import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 
@@ -35,9 +39,12 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class HttpClientUtil {
-    private HttpClientUtil(){
-        
+
+    private HttpClientUtil() {
+
     }
+
+    private static JsonObject cliConfig = null;
 
     /**
      * It makes a GET HTTP call and the response processes it as JSON. The way it returns it is done
@@ -68,5 +75,24 @@ public class HttpClientUtil {
         try (var stringReader = new StringReader(json); var jsonReader = Json.createReader(stringReader)) {
             return read.apply(jsonReader);
         }
+    }
+
+    public static Map<String, String> getConfigs(String configName) throws InterruptedException {
+        if (cliConfig == null) {
+            try {
+                cliConfig = HttpClientUtil.getJson(JAKARTA_LEMON_CONFIG_URL, JsonReader::readObject);
+
+            } catch (IOException | URISyntaxException ex) {
+                log.error(ex.getMessage(), ex);
+
+            }
+        }
+        Map<String, String> importablesMap = new LinkedHashMap<>();
+        if (cliConfig != null) {
+            var importablesJson = cliConfig.getJsonObject(configName);
+            importablesJson.keySet().forEach(key -> importablesMap.put(key, importablesJson.
+                getString(key)));
+        }
+        return importablesMap;
     }
 }

@@ -212,3 +212,4 @@ nbdist/
 
 # End of https://www.toptal.com/developers/gitignore/api/java,intellij+all,eclipse,netbeans,visualstudiocode
 /nbactions.xml
+/nb-configuration.xml
