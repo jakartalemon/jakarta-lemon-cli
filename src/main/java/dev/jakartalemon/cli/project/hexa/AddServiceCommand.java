@@ -17,8 +17,12 @@ package dev.jakartalemon.cli.project.hexa;
 
 import dev.jakartalemon.cli.util.Constants;
 import static dev.jakartalemon.cli.util.Constants.DOMAIN;
+import static dev.jakartalemon.cli.util.Constants.JAVA;
+import static dev.jakartalemon.cli.util.Constants.MAIN;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
 import static dev.jakartalemon.cli.util.Constants.SERVICE;
+import static dev.jakartalemon.cli.util.Constants.SRC;
 import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
 import dev.jakartalemon.cli.util.HttpClientUtil;
 import jakarta.json.Json;
@@ -92,7 +96,7 @@ public class AddServiceCommand implements Callable<Integer> {
         try {
             log.info("Creating {} service class", className);
             List<String> lines = new ArrayList<>();
-            var packageName = "%s.%s.%s".formatted(projectInfo.getString(PACKAGE), DOMAIN, SERVICE);
+            var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, SERVICE);
             lines.add("package %s;".formatted(packageName));
             lines.add(EMPTY);
             lines.add("public class %s {".formatted(className));
@@ -107,7 +111,7 @@ public class AddServiceCommand implements Callable<Integer> {
             });
             lines.add("}");
 
-            var classPackage = Path.of(projectInfo.getString(DOMAIN), "src", "main", "java");
+            var classPackage = Path.of(projectInfo.getString(DOMAIN), SRC, MAIN, JAVA);
             var packageNameList = packageName.split("\\.");
             for (var item : packageNameList) {
                 classPackage = classPackage.resolve(item);
