@@ -41,7 +41,7 @@ public class Constants {
     public static final String DTO = "dto";
     public static final String POM = "pom";
     public static final String JAR = "jar";
-    public static final String PORTS = "ports";
+    public static final String ADAPTERS = "adapters";
     public static final String SERVICE = "service";
     public static final String MODEL = "model";
     public static final String MAPPER = "mapper";
@@ -51,6 +51,7 @@ public class Constants {
     public static final String MAIN = "main";
     public static final String JAVA = "java";
     public static final String PACKAGE_TEMPLATE = "%s.%s.%s";
+    public static final String IMPORT_PACKAGE_TEMPLATE = "import %s;";
 
     public static final int TAB_SIZE = 4;
 
