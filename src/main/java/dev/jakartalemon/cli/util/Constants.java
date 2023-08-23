@@ -22,6 +22,8 @@ import java.util.Map;
  */
 public class Constants {
 
+    public static final String IMPORTABLES = "importables";
+
     private Constants() {
     }
 
@@ -45,6 +47,10 @@ public class Constants {
     public static final String MAPPER = "mapper";
     public static final String JAVA_VERSION = "17";
     public static final String ORG_MAPSTRUCT = "org.mapstruct";
+    public static final String SRC = "src";
+    public static final String MAIN = "main";
+    public static final String JAVA = "java";
+    public static final String PACKAGE_TEMPLATE = "%s.%s.%s";
 
     public static final int TAB_SIZE = 4;
 

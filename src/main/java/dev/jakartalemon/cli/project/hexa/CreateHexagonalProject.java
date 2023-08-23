@@ -127,9 +127,10 @@ public class CreateHexagonalProject {
         pomPath.ifPresent(pom -> {
             log.debug("domain created at {}", pom);
             var parent = pom.getParent();
-            PomUtil.getInstance().createJavaProjectStructure(parent, packageName + ".domain.dao");
+            PomUtil.getInstance().createJavaProjectStructure(parent, "%s.%s.%s".formatted(
+                packageName, DOMAIN, REPOSITORY));
             PomUtil.getInstance()
-                .createJavaProjectStructure(parent, packageName + "." + DOMAIN + "." + MODEL);
+                .createJavaProjectStructure(parent, "%s.%s.%s".formatted(packageName, DOMAIN, MODEL));
             PomUtil.getInstance().
                 createJavaProjectStructure(parent, packageName + ".domain.service");
         });

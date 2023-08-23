@@ -1,0 +1,12 @@
+{
+    "AtmService": {
+        "withdrawal":{
+            "amount":"double",
+            "customer": "Person"
+        },
+        "payment":{
+            "amount":"double",
+            "customer": "Person"
+        }
+    }
+}

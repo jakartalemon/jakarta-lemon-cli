@@ -1,0 +1,15 @@
+
+import java.util.Optional;
+import java.util.stream.Stream;
+
+public interface IRepository<T, ID> {
+    Stream<T> findAll();
+
+    Optional<T> findById(ID id);
+
+    void create(T model);
+
+    void update(ID id, T model);
+
+    void delete(ID id);
+}

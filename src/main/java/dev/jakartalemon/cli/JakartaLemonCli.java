@@ -17,6 +17,7 @@ package dev.jakartalemon.cli;
 
 import dev.jakartalemon.cli.project.CreateProjectCommand;
 import dev.jakartalemon.cli.project.hexa.AddModelCommand;
+import dev.jakartalemon.cli.project.hexa.AddServiceCommand;
 import java.util.concurrent.Callable;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -35,7 +36,8 @@ import picocli.CommandLine.HelpCommand;
     subcommands = {
         HelpCommand.class,
         CreateProjectCommand.class,
-        AddModelCommand.class
+        AddModelCommand.class,
+        AddServiceCommand.class
     }
 )
 public class JakartaLemonCli implements Callable<Integer> {
