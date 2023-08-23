@@ -16,17 +16,14 @@
 package dev.jakartalemon.cli.project.hexa;
 
 import dev.jakartalemon.cli.util.Constants;
-import static dev.jakartalemon.cli.util.Constants.DOMAIN;
-import static dev.jakartalemon.cli.util.Constants.JAVA;
-import static dev.jakartalemon.cli.util.Constants.MAIN;
-import static dev.jakartalemon.cli.util.Constants.PACKAGE;
-import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
-import static dev.jakartalemon.cli.util.Constants.SERVICE;
-import static dev.jakartalemon.cli.util.Constants.SRC;
-import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
+import dev.jakartalemon.cli.util.FileClassUtil;
 import dev.jakartalemon.cli.util.HttpClientUtil;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import picocli.CommandLine;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -35,14 +32,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
+
+import static dev.jakartalemon.cli.util.Constants.DOMAIN;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
+import static dev.jakartalemon.cli.util.Constants.SERVICE;
+import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
-import picocli.CommandLine;
 
 /**
- *
  * @author Diego Silva mailto:diego.silva@apuntesdejava.com
  */
 @CommandLine.Command(
@@ -79,7 +78,7 @@ public class AddServiceCommand implements Callable<Integer> {
             return 2;
         }
         try (var jsonReader = Json.createReader(Files.newBufferedReader(file.toPath()));
-            var projectInfoReader = Json.createReader(Files.newBufferedReader(projectInfoPath))) {
+             var projectInfoReader = Json.createReader(Files.newBufferedReader(projectInfoPath))) {
             var structure = jsonReader.readObject();
             var projectInfo = projectInfoReader.readObject();
             structure.forEach(
@@ -96,14 +95,15 @@ public class AddServiceCommand implements Callable<Integer> {
         try {
             log.info("Creating {} service class", className);
             List<String> lines = new ArrayList<>();
-            var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, SERVICE);
+            var packageName =
+                PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, SERVICE);
             lines.add("package %s;".formatted(packageName));
             lines.add(EMPTY);
             lines.add("public class %s {".formatted(className));
             lines.add(EMPTY);
             methodsDefinitions.keySet().forEach(methodName -> {
                 var methodSignature = "%spublic void %s () {".formatted(StringUtils.repeat(SPACE,
-                    TAB_SIZE),
+                        TAB_SIZE),
                     methodName);
                 lines.add(methodSignature);
                 lines.add("%s}".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
@@ -111,14 +111,7 @@ public class AddServiceCommand implements Callable<Integer> {
             });
             lines.add("}");
 
-            var classPackage = Path.of(projectInfo.getString(DOMAIN), SRC, MAIN, JAVA);
-            var packageNameList = packageName.split("\\.");
-            for (var item : packageNameList) {
-                classPackage = classPackage.resolve(item);
-            }
-            var classPath = classPackage.resolve("%s.java".formatted(className));
-            Files.createDirectories(classPath.getParent());
-            Files.write(classPath, lines);
+            FileClassUtil.writeFile(projectInfo,packageName,className,lines);
         } catch (IOException ex) {
             log.error(ex.getMessage(), ex);
         }

@@ -16,9 +16,11 @@
 package dev.jakartalemon.cli.project.hexa;
 
 import dev.jakartalemon.cli.util.Constants;
+import dev.jakartalemon.cli.util.FileClassUtil;
 import dev.jakartalemon.cli.util.HttpClientUtil;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonValue;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import picocli.CommandLine.Command;
@@ -34,9 +36,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static dev.jakartalemon.cli.util.Constants.DOMAIN;
+import static dev.jakartalemon.cli.util.Constants.IMPORT_PACKAGE_TEMPLATE;
 import static dev.jakartalemon.cli.util.Constants.JAVA;
 import static dev.jakartalemon.cli.util.Constants.MAIN;
 import static dev.jakartalemon.cli.util.Constants.MODEL;
@@ -45,12 +50,7 @@ import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
 import static dev.jakartalemon.cli.util.Constants.REPOSITORY;
 import static dev.jakartalemon.cli.util.Constants.SRC;
 import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
-import jakarta.json.JsonValue;
 import static java.nio.charset.StandardCharsets.UTF_8;
-
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
-
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
 
@@ -92,7 +92,7 @@ public class AddModelCommand implements Callable<Integer> {
             return 2;
         }
         try (var jsonReader = Json.createReader(Files.newBufferedReader(file.toPath()));
-            var projectInfoReader = Json.createReader(Files.newBufferedReader(projectInfoPath))) {
+             var projectInfoReader = Json.createReader(Files.newBufferedReader(projectInfoPath))) {
             var structure = jsonReader.readObject();
             var projectInfo = projectInfoReader.readObject();
             var repositoryPath = createRepository(projectInfo);
@@ -143,21 +143,14 @@ public class AddModelCommand implements Callable<Integer> {
                 add("%s%s %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE), classType,
                     field));
             if (importablesMap.containsKey(classType)) {
-                lines.add(4, "import %s;".formatted(importablesMap.get(classType)));
+                lines.add(4, IMPORT_PACKAGE_TEMPLATE.formatted(importablesMap.get(classType)));
             }
         });
 
         lines.add("}");
         Optional.ofNullable(primaryKeyTypeRef.get()).ifPresentOrElse(primaryKeyType -> {
             try {
-                var classPackage = Path.of(projectInfo.getString(DOMAIN), SRC, MAIN, JAVA);
-                var packageNameList = packageName.split("\\.");
-                for (var item : packageNameList) {
-                    classPackage = classPackage.resolve(item);
-                }
-                var classPath = classPackage.resolve("%s.java".formatted(className));
-                Files.createDirectories(classPath.getParent());
-                Files.write(classPath, lines);
+                FileClassUtil.writeFile(projectInfo, packageName, className, lines);
                 log.info("{} class Created", className);
 
                 createRepository(projectInfo, repositoryPath, className, primaryKeyType);
@@ -166,7 +159,7 @@ public class AddModelCommand implements Callable<Integer> {
             }
         }, ()
             -> log.error("You must specify a field that is of type \"primaryKey\" for the {} class",
-                className));
+            className));
 
     }
 
@@ -211,14 +204,14 @@ public class AddModelCommand implements Callable<Integer> {
         List<String> lines = new ArrayList<>();
         lines.add("%s %s;".formatted(PACKAGE, packageName));
         lines.add(EMPTY);
-        lines.add("import %s;".formatted(modelPackage));
+        lines.add(IMPORT_PACKAGE_TEMPLATE.formatted(modelPackage));
         lines.add(EMPTY);
         lines.add("public interface %s extends IRepository<%s, %s> {".formatted(fileName, className,
             primaryKeyType));
         lines.add("}");
         if (importablesMap.containsKey(primaryKeyType)) {
-                lines.add(2, "import %s;".formatted(importablesMap.get(primaryKeyType)));
-            }
+            lines.add(2, IMPORT_PACKAGE_TEMPLATE.formatted(importablesMap.get(primaryKeyType)));
+        }
         var repositoryModelPath = repositoryPath.resolve(fileName + ".java");
         Files.write(repositoryModelPath, lines);
     }

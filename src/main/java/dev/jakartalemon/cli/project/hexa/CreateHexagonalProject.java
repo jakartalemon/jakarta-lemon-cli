@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static dev.jakartalemon.cli.project.constants.Archetype.HEXA;
+import static dev.jakartalemon.cli.util.Constants.ADAPTERS;
 import static dev.jakartalemon.cli.util.Constants.APPLICATION;
 import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
 import static dev.jakartalemon.cli.util.Constants.DOMAIN;
@@ -42,8 +43,8 @@ import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_RELEASE;
 import static dev.jakartalemon.cli.util.Constants.MODEL;
 import static dev.jakartalemon.cli.util.Constants.ORG_MAPSTRUCT;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
 import static dev.jakartalemon.cli.util.Constants.POM;
-import static dev.jakartalemon.cli.util.Constants.PORTS;
 import static dev.jakartalemon.cli.util.Constants.PROJECT_GROUP_ID;
 import static dev.jakartalemon.cli.util.Constants.PROJECT_VERSION;
 import static dev.jakartalemon.cli.util.Constants.REPOSITORY;
@@ -127,10 +128,11 @@ public class CreateHexagonalProject {
         pomPath.ifPresent(pom -> {
             log.debug("domain created at {}", pom);
             var parent = pom.getParent();
-            PomUtil.getInstance().createJavaProjectStructure(parent, "%s.%s.%s".formatted(
+            PomUtil.getInstance().createJavaProjectStructure(parent, PACKAGE_TEMPLATE.formatted(
                 packageName, DOMAIN, REPOSITORY));
             PomUtil.getInstance()
-                .createJavaProjectStructure(parent, "%s.%s.%s".formatted(packageName, DOMAIN, MODEL));
+                .createJavaProjectStructure(parent,
+                    PACKAGE_TEMPLATE.formatted(packageName, DOMAIN, MODEL));
             PomUtil.getInstance().
                 createJavaProjectStructure(parent, packageName + ".domain.service");
         });
@@ -247,7 +249,7 @@ public class CreateHexagonalProject {
             .packaging(POM)
             .modules(
                 List.of(
-                    DTO, MAPPER, PORTS
+                    DTO, MAPPER, ADAPTERS
                 )
             );
         var pomPath = PomUtil.getInstance().createPom(projectPath.resolve(INFRASTRUCTURE),
@@ -259,7 +261,7 @@ public class CreateHexagonalProject {
                 packageName);
             createMapperInfrastructureModule(pom.getParent(), groupId, version,
                 packageName);
-            createPortsInfrastructureModule(pom.getParent(), groupId, version,
+            createAdaptersInfrastructureModule(pom.getParent(), groupId, version,
                 packageName);
         });
         return pomPath;
@@ -361,7 +363,7 @@ public class CreateHexagonalProject {
         });
     }
 
-    private void createPortsInfrastructureModule(Path projectPath,
+    private void createAdaptersInfrastructureModule(Path projectPath,
         String groupId,
         String version,
         String packageName) {
@@ -370,22 +372,32 @@ public class CreateHexagonalProject {
                 ARTIFACT_ID, INFRASTRUCTURE,
                 VERSION, version
             ))
-            .artifactId(PORTS)
+            .artifactId(ADAPTERS)
             .packaging(JAR)
             .dependencies(
                 List.of(
-                    LOMBOK_DEPENDENCY
+                    LOMBOK_DEPENDENCY,
+                    Map.of(
+                        GROUP_ID,PROJECT_GROUP_ID,
+                        ARTIFACT_ID,DOMAIN,
+                        VERSION,PROJECT_VERSION
+                    ),
+                    Map.of(
+                        GROUP_ID,PROJECT_GROUP_ID,
+                        ARTIFACT_ID,SERVICE,
+                        VERSION,PROJECT_VERSION
+                    )
                 )
             ).properties(
                 Map.of(MAVEN_COMPILER_RELEASE, JAVA_VERSION)
             );
-        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve(PORTS),
+        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve(ADAPTERS),
             modulePom.build());
         pomPath.ifPresent(pom -> {
-            log.debug("ports created at {}", pom.toAbsolutePath());
+            log.debug("adapters created at {}", pom.toAbsolutePath());
             PomUtil.getInstance()
-                .createJavaProjectStructure(pom.getParent(), "%s.%s.ports".formatted(
-                    packageName, INFRASTRUCTURE));
+                .createJavaProjectStructure(pom.getParent(), PACKAGE_TEMPLATE.formatted(
+                    packageName, INFRASTRUCTURE,ADAPTERS));
         });
     }
 
