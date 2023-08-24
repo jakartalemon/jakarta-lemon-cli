@@ -38,7 +38,7 @@ public class Constants {
     public static final String PROJECT_GROUP_ID = "${project.groupId}";
     public static final String PROJECT_VERSION = "${project.version}";
     public static final String MAVEN_COMPILER_RELEASE = "maven.compiler.release";
-    public static final String DTO = "dto";
+    public static final String ENTITIES = "entities";
     public static final String POM = "pom";
     public static final String JAR = "jar";
     public static final String ADAPTERS = "adapters";
