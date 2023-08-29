@@ -23,6 +23,7 @@ import java.util.Map;
 public class Constants {
 
     public static final String IMPORTABLES = "importables";
+    public static final String DATABASES = "databases";
 
     private Constants() {
     }
@@ -42,7 +43,7 @@ public class Constants {
     public static final String POM = "pom";
     public static final String JAR = "jar";
     public static final String ADAPTERS = "adapters";
-    public static final String SERVICE = "service";
+    public static final String USECASE = "usecase";
     public static final String MODEL = "model";
     public static final String MAPPER = "mapper";
     public static final String JAVA_VERSION = "17";
@@ -56,12 +57,19 @@ public class Constants {
     public static final int TAB_SIZE = 4;
 
     public static final String JAKARTA_LEMON_HOST_BASE = "https://jakartalemon.dev";
-    public static final String JAKARTA_LEMON_CONFIG_URL = JAKARTA_LEMON_HOST_BASE + "/lemon-cli-config.json";
+    public static final String JAKARTA_LEMON_CONFIG_URL =
+        JAKARTA_LEMON_HOST_BASE + "/lemon-cli-config.json";
 
     public static final String PROJECT_INFO_JSON = "project_info.json";
     public static final Map<String, String> LOMBOK_DEPENDENCY = Map.of(
         GROUP_ID, "org.projectlombok",
         ARTIFACT_ID, "lombok",
         VERSION, "${org.projectlombok.version}"
+    );
+    public static final Map<String, String> JAKARTA_INJECT_DEPENDENCY = Map.of(
+        GROUP_ID, "jakarta.inject",
+        ARTIFACT_ID, "jakarta.inject-api",
+        VERSION, "2.0.1",
+        "scope", "provided"
     );
 }

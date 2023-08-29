@@ -46,26 +46,33 @@ MODEL_DEFINITION.json format
 }
 ```
 
-## Add Service
+## Add Use case
 Create service in project folder
 
 ```
-addservice SERVICE_DEFINITION.json
+addusecase USECASE_DEFINITION.json
 
 ```
 
-SERVICE_DEFINITION.json
+USECASE_DEFINITION.json
 ```
 {
     "AtmService": {
-        "withdrawal":{
-            "amount":"double",
-            "customer": "Person"
-        },
-        "payment":{
-            "amount":"double",
-            "customer": "Person"
+        "injects": [
+            "BankRepository"
+        ],
+        "methods": {
+            "withdrawal": {
+                "amount": "double",
+                "customer": "Person",
+                "return": "double"
+            },
+            "payment": {
+                "amount": "double",
+                "customer": "Person"
+            }
         }
     }
 }
+
 ```

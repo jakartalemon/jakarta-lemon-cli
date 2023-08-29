@@ -1,0 +1,28 @@
+{
+  "storageType": "h2",
+  "connectionInfo": {
+    "url": "",
+    "user": "",
+    "password": "",
+    "properties": {}
+  },
+  "entities": [
+    {
+      "Person": {
+        "mapper": "Person",
+        "fields": {
+          "personId": {
+            "dni": {
+              "primaryKey": true,
+              "type": "String",
+              "length": 10
+            }
+          },
+          "firstName": {
+            "type": "String"
+          }
+        }
+      }
+    }
+  ]
+}

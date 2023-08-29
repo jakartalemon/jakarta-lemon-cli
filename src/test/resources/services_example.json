@@ -1,12 +1,18 @@
 {
     "AtmService": {
-        "withdrawal":{
-            "amount":"double",
-            "customer": "Person"
-        },
-        "payment":{
-            "amount":"double",
-            "customer": "Person"
+        "injects": [
+            "BankRepository"
+        ],
+        "methods": {
+            "withdrawal": {
+                "amount": "double",
+                "customer": "Person",
+                "return": "double"
+            },
+            "payment": {
+                "amount": "double",
+                "customer": "Person"
+            }
         }
     }
 }

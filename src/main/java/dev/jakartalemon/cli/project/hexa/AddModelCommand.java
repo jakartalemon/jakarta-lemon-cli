@@ -18,7 +18,7 @@ package dev.jakartalemon.cli.project.hexa;
 import dev.jakartalemon.cli.util.Constants;
 import dev.jakartalemon.cli.util.FileClassUtil;
 import dev.jakartalemon.cli.util.HttpClientUtil;
-import jakarta.json.Json;
+import dev.jakartalemon.cli.util.JsonFileUtil;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonValue;
 import lombok.extern.slf4j.Slf4j;
@@ -79,30 +79,20 @@ public class AddModelCommand implements Callable<Integer> {
     }
 
     @Override
-    public Integer call() throws Exception {
-        var projectInfoPath = Path.of(Constants.PROJECT_INFO_JSON);
+    public Integer call() {
+        return JsonFileUtil.getFileJson(file.toPath())
+            .map(structure-> {
+                return JsonFileUtil.getProjectInfo().map(projectInfo -> {
+                    var repositoryPath = createRepository(projectInfo);
+                    structure.forEach(
+                        (key, classDef) -> createClass(projectInfo, key, classDef.asJsonObject(),
+                            repositoryPath.orElseThrow()));
+                    return 0;
+                }).orElse(1);
+            }).orElse(2);
 
-        if (!Files.exists(projectInfoPath)) {
-            log.error("File not found: {}", projectInfoPath.getFileName());
-            return 1;
-        }
 
-        if (!Files.exists(file.toPath())) {
-            log.error("File not found: {}", file);
-            return 2;
-        }
-        try (var jsonReader = Json.createReader(Files.newBufferedReader(file.toPath()));
-             var projectInfoReader = Json.createReader(Files.newBufferedReader(projectInfoPath))) {
-            var structure = jsonReader.readObject();
-            var projectInfo = projectInfoReader.readObject();
-            var repositoryPath = createRepository(projectInfo);
-            structure.forEach(
-                (key, classDef) -> createClass(projectInfo, key, classDef.asJsonObject(),
-                    repositoryPath.orElseThrow()));
 
-        }
-
-        return 0;
     }
 
     private void createClass(JsonObject projectInfo,

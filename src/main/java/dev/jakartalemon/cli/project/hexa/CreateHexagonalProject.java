@@ -35,6 +35,7 @@ import static dev.jakartalemon.cli.util.Constants.DOMAIN;
 import static dev.jakartalemon.cli.util.Constants.ENTITIES;
 import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
 import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_INJECT_DEPENDENCY;
 import static dev.jakartalemon.cli.util.Constants.JAR;
 import static dev.jakartalemon.cli.util.Constants.JAVA_VERSION;
 import static dev.jakartalemon.cli.util.Constants.LOMBOK_DEPENDENCY;
@@ -48,7 +49,7 @@ import static dev.jakartalemon.cli.util.Constants.POM;
 import static dev.jakartalemon.cli.util.Constants.PROJECT_GROUP_ID;
 import static dev.jakartalemon.cli.util.Constants.PROJECT_VERSION;
 import static dev.jakartalemon.cli.util.Constants.REPOSITORY;
-import static dev.jakartalemon.cli.util.Constants.SERVICE;
+import static dev.jakartalemon.cli.util.Constants.USECASE;
 import static dev.jakartalemon.cli.util.Constants.VERSION;
 
 /**
@@ -117,7 +118,8 @@ public class CreateHexagonalProject {
             ARTIFACT_ID, artifactId,
             VERSION, version
         )).packaging(JAR).dependencies(List.of(
-            LOMBOK_DEPENDENCY
+            LOMBOK_DEPENDENCY,
+            JAKARTA_INJECT_DEPENDENCY
         )).properties(Map.of(
             MAVEN_COMPILER_RELEASE, JAVA_VERSION
         )).artifactId(DOMAIN);
@@ -134,7 +136,8 @@ public class CreateHexagonalProject {
                 .createJavaProjectStructure(parent,
                     PACKAGE_TEMPLATE.formatted(packageName, DOMAIN, MODEL));
             PomUtil.getInstance().
-                createJavaProjectStructure(parent, packageName + ".domain.service");
+                createJavaProjectStructure(parent,
+                    PACKAGE_TEMPLATE.formatted(packageName ,DOMAIN,USECASE));
         });
         return pomPath;
     }
@@ -151,7 +154,7 @@ public class CreateHexagonalProject {
                 VERSION, version)
             ).artifactId(APPLICATION)
             .packaging(POM)
-            .modules(List.of(REPOSITORY, SERVICE));
+            .modules(List.of(REPOSITORY, USECASE));
         var pomPath = PomUtil.getInstance().createPom(projectPath.resolve(APPLICATION),
             modulePom.build());
         pomPath.ifPresent(pom -> {
@@ -170,7 +173,7 @@ public class CreateHexagonalProject {
         String packageName) {
         var modulePom = PomModel.builder()
             .parent(Map.of(GROUP_ID, groupId,
-                ARTIFACT_ID, dev.jakartalemon.cli.util.Constants.APPLICATION,
+                ARTIFACT_ID, APPLICATION,
                 VERSION, version
             ))
             .artifactId(REPOSITORY)
@@ -200,10 +203,10 @@ public class CreateHexagonalProject {
         String packageName) {
         var modulePom = PomModel.builder()
             .parent(Map.of(GROUP_ID, groupId,
-                ARTIFACT_ID, dev.jakartalemon.cli.util.Constants.APPLICATION,
+                ARTIFACT_ID, APPLICATION,
                 VERSION, version
             ))
-            .artifactId(SERVICE)
+            .artifactId(USECASE)
             .packaging(JAR)
             .dependencies(List.of(
                 Map.of(
@@ -216,17 +219,12 @@ public class CreateHexagonalProject {
                     ARTIFACT_ID, REPOSITORY,
                     VERSION, PROJECT_VERSION
                 ),
-                Map.of(
-                    GROUP_ID, "jakarta.inject",
-                    ARTIFACT_ID, "jakarta.inject-api",
-                    VERSION, "2.0.1",
-                    "scope", "provided"
-                )
+                JAKARTA_INJECT_DEPENDENCY
             ))
             .properties(
                 Map.of(MAVEN_COMPILER_RELEASE, JAVA_VERSION)
             );
-        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve(SERVICE),
+        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve(USECASE),
             modulePom.build());
 
         pomPath.ifPresent(pom -> {
@@ -385,7 +383,7 @@ public class CreateHexagonalProject {
                     ),
                     Map.of(
                         GROUP_ID, PROJECT_GROUP_ID,
-                        ARTIFACT_ID, SERVICE,
+                        ARTIFACT_ID, USECASE,
                         VERSION, PROJECT_VERSION
                     ),
                     Map.of(
