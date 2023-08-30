@@ -99,26 +99,41 @@ public class AddUseCaseCommand implements Callable<Integer> {
                 var injects = classDefinition.getJsonArray(INJECTS);
                 for (var i = 0; i < injects.size(); i++) {
                     var inject = injects.getString(i);
-                    var importInject =
-                        "import %s.%s.%s.%s;".formatted(projectInfo.getString(PACKAGE),
-                            DOMAIN, REPOSITORY, inject);
+                    var importInject
+                        = "import %s.%s.%s.%s;".formatted(projectInfo.getString(PACKAGE),
+                        DOMAIN, REPOSITORY, inject);
                     lines.add(importInject);
                     classesInject.add(inject);
                 }
-                lines.add("import jakarta.inject.Inject;");
                 lines.add(EMPTY);
             }
             lines.add("%s class %s {".formatted(PUBLIC, className));
             lines.add(EMPTY);
             if (!classesInject.isEmpty()) {
+                List<String> constructorsParameters = new ArrayList<>();
                 classesInject.forEach(classInject -> {
-                    lines.add("%s@Inject".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
                     var variableName = StringUtils.uncapitalize(classInject);
-                    lines.add("%sprivate %s %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
-                        classInject, variableName));
+                    var declarations = "%s %s".formatted(classInject, variableName);
+                    lines.add("%sprivate final %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
+                        declarations));
+                    constructorsParameters.add(declarations);
                     lines.add(EMPTY);
                 });
                 lines.add(EMPTY);
+                if (!constructorsParameters.isEmpty()) {
+                    var parameterDeclaration = String.join(COMMA, constructorsParameters);
+                    lines.add("%s%s %s (%s){".formatted(StringUtils.repeat(
+                        SPACE, TAB_SIZE), PUBLIC, className, parameterDeclaration));
+                    classesInject.forEach(classInject -> {
+                        var variableName = StringUtils.uncapitalize(classInject);
+                        lines.add("%sthis.%s = %s;".formatted(StringUtils.repeat(
+                            SPACE, TAB_SIZE * 2), variableName, variableName));
+                    });
+                    lines.add("%s}".formatted(StringUtils.repeat(
+                        SPACE, TAB_SIZE)));
+
+                    lines.add(EMPTY);
+                }
             }
 
             var methods = classDefinition.getJsonObject("methods");
@@ -143,7 +158,6 @@ public class AddUseCaseCommand implements Callable<Integer> {
                         return "%s %s".formatted(parameterType,
                             methodNameKey);
                     }).collect(Collectors.joining(COMMA));
-
 
                 var methodSignature = "%s%s %s %s (%s) {".formatted(StringUtils.repeat(
                     SPACE, TAB_SIZE), PUBLIC, returnValue, methodName, parameters);

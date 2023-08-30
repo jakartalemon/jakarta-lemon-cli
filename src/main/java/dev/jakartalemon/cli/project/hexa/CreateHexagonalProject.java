@@ -118,8 +118,7 @@ public class CreateHexagonalProject {
             ARTIFACT_ID, artifactId,
             VERSION, version
         )).packaging(JAR).dependencies(List.of(
-            LOMBOK_DEPENDENCY,
-            JAKARTA_INJECT_DEPENDENCY
+            LOMBOK_DEPENDENCY
         )).properties(Map.of(
             MAVEN_COMPILER_RELEASE, JAVA_VERSION
         )).artifactId(DOMAIN);
