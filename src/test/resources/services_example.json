@@ -7,7 +7,7 @@
             "withdrawal": {
                 "amount": "double",
                 "customer": "Person",
-                "return": "double"
+                "return": "double:0"
             },
             "payment": {
                 "amount": "double",

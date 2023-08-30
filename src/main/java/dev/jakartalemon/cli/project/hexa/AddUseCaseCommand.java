@@ -15,7 +15,9 @@
  */
 package dev.jakartalemon.cli.project.hexa;
 
+import dev.jakartalemon.cli.util.Constants;
 import dev.jakartalemon.cli.util.FileClassUtil;
+import dev.jakartalemon.cli.util.HttpClientUtil;
 import dev.jakartalemon.cli.util.JsonFileUtil;
 import jakarta.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
@@ -26,12 +28,21 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
+import static dev.jakartalemon.cli.util.Constants.COLON;
+import static dev.jakartalemon.cli.util.Constants.COMMA;
 import static dev.jakartalemon.cli.util.Constants.DOMAIN;
+import static dev.jakartalemon.cli.util.Constants.IMPORT_PACKAGE_TEMPLATE;
+import static dev.jakartalemon.cli.util.Constants.INJECTS;
+import static dev.jakartalemon.cli.util.Constants.MODEL;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
+import static dev.jakartalemon.cli.util.Constants.PUBLIC;
 import static dev.jakartalemon.cli.util.Constants.REPOSITORY;
+import static dev.jakartalemon.cli.util.Constants.RETURN;
 import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
 import static dev.jakartalemon.cli.util.Constants.USECASE;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -48,6 +59,8 @@ import static org.apache.commons.lang3.StringUtils.SPACE;
 @Slf4j
 public class AddUseCaseCommand implements Callable<Integer> {
 
+    private static final int IMPORT_LINE = 2;
+    private final Map<String, String> importablesMap;
     @CommandLine.Parameters(
         paramLabel = "USECASE_DEFINITION.json",
         descriptionKey = "usecase_definition"
@@ -55,8 +68,7 @@ public class AddUseCaseCommand implements Callable<Integer> {
     private File file;
 
     public AddUseCaseCommand() throws InterruptedException {
-        //  Map<String, String> importablesMap = HttpClientUtil.getConfigs(Constants.IMPORTABLES);
-
+        importablesMap = HttpClientUtil.getConfigs(Constants.IMPORTABLES);
     }
 
     @Override
@@ -78,11 +90,13 @@ public class AddUseCaseCommand implements Callable<Integer> {
             List<String> lines = new ArrayList<>();
             var packageName
                 = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, USECASE);
-            lines.add("package %s;".formatted(packageName));
+            lines.add("%s %s;".formatted(PACKAGE, packageName));
             lines.add(EMPTY);
+            lines.add(
+                "import %s.%s.%s.*;".formatted(projectInfo.getString(PACKAGE), DOMAIN, MODEL));
             List<String> classesInject = new ArrayList<>();
-            if (classDefinition.containsKey("injects")) {
-                var injects = classDefinition.getJsonArray("injects");
+            if (classDefinition.containsKey(INJECTS)) {
+                var injects = classDefinition.getJsonArray(INJECTS);
                 for (var i = 0; i < injects.size(); i++) {
                     var inject = injects.getString(i);
                     var importInject =
@@ -94,7 +108,7 @@ public class AddUseCaseCommand implements Callable<Integer> {
                 lines.add("import jakarta.inject.Inject;");
                 lines.add(EMPTY);
             }
-            lines.add("public class %s {".formatted(className));
+            lines.add("%s class %s {".formatted(PUBLIC, className));
             lines.add(EMPTY);
             if (!classesInject.isEmpty()) {
                 classesInject.forEach(classInject -> {
@@ -111,10 +125,33 @@ public class AddUseCaseCommand implements Callable<Integer> {
 
             methods.keySet().forEach(methodName -> {
                 var method = methods.getJsonObject(methodName);
-                var returnValue = method.getString("return", "void");
-                var methodSignature = "%spublic %s %s () {".formatted(StringUtils.repeat(
-                    SPACE, TAB_SIZE), returnValue, methodName);
+                var returnValue = method.getString(RETURN, "void");
+                String defaultReturnValue = null;
+                if (returnValue.contains(COLON)) {
+                    var returns = returnValue.split(COLON);
+                    returnValue = returns[0];
+                    defaultReturnValue = returns[1];
+                }
+                var parameters = method.keySet().stream()
+                    .filter(methodNameKey -> !methodNameKey.equals(RETURN))
+                    .map(methodNameKey -> {
+                        var parameterType = method.getString(methodNameKey);
+                        if (importablesMap.containsKey(parameterType)) {
+                            lines.add(IMPORT_LINE, IMPORT_PACKAGE_TEMPLATE.formatted(
+                                importablesMap.get(parameterType)));
+                        }
+                        return "%s %s".formatted(parameterType,
+                            methodNameKey);
+                    }).collect(Collectors.joining(COMMA));
+
+
+                var methodSignature = "%s%s %s %s (%s) {".formatted(StringUtils.repeat(
+                    SPACE, TAB_SIZE), PUBLIC, returnValue, methodName, parameters);
                 lines.add(methodSignature);
+                if (defaultReturnValue != null) {
+                    lines.add("%s%s %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE * 2),
+                        RETURN, defaultReturnValue));
+                }
                 lines.add("%s}".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
                 lines.add(EMPTY);
             });
