@@ -41,6 +41,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static dev.jakartalemon.cli.util.Constants.DOMAIN;
+import static dev.jakartalemon.cli.util.Constants.FIELDS;
 import static dev.jakartalemon.cli.util.Constants.IMPORT_PACKAGE_TEMPLATE;
 import static dev.jakartalemon.cli.util.Constants.JAVA;
 import static dev.jakartalemon.cli.util.Constants.MAIN;
@@ -81,16 +82,13 @@ public class AddModelCommand implements Callable<Integer> {
     @Override
     public Integer call() {
         return JsonFileUtil.getFileJson(file.toPath())
-            .map(structure-> {
-                return JsonFileUtil.getProjectInfo().map(projectInfo -> {
-                    var repositoryPath = createRepository(projectInfo);
-                    structure.forEach(
-                        (key, classDef) -> createClass(projectInfo, key, classDef.asJsonObject(),
-                            repositoryPath.orElseThrow()));
-                    return 0;
-                }).orElse(1);
-            }).orElse(2);
-
+            .map(structure -> JsonFileUtil.getProjectInfo().map(projectInfo -> {
+                var repositoryPath = createRepository(projectInfo);
+                structure.forEach(
+                    (key, classDef) -> createClass(projectInfo, key, classDef.asJsonObject(),
+                        repositoryPath.orElseThrow()));
+                return 0;
+            }).orElse(1)).orElse(2);
 
 
     }
@@ -108,18 +106,23 @@ public class AddModelCommand implements Callable<Integer> {
         lines.add(EMPTY);
         lines.add("import lombok.Getter;");
         lines.add("import lombok.Setter;");
+        lines.add("import lombok.AllArgsConstructor;");
+        lines.add("import lombok.NoArgsConstructor;");
         lines.add(EMPTY);
         lines.add("@Setter");
         lines.add("@Getter");
+        lines.add("@AllArgsConstructor");
+        lines.add("@NoArgsConstructor");
         lines.add("public class %s {".formatted(className));
         AtomicReference<String> primaryKeyTypeRef = new AtomicReference<>();
 
+        var fieldsDef = classDef.getJsonObject(FIELDS);
         //creating fields
-        classDef.keySet().forEach(field -> {
-            var classTypeValue = classDef.get(field);
+        fieldsDef.keySet().forEach(field -> {
+            var classTypeValue = fieldsDef.get(field);
             String classType = EMPTY;
             if (classTypeValue.getValueType() == JsonValue.ValueType.STRING) {
-                classType = classDef.getString(field);
+                classType = fieldsDef.getString(field);
 
             } else if (classTypeValue.getValueType() == JsonValue.ValueType.OBJECT) {
                 var classObjectDef = classTypeValue.asJsonObject();
@@ -133,7 +136,7 @@ public class AddModelCommand implements Callable<Integer> {
                 add("%s%s %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE), classType,
                     field));
             if (importablesMap.containsKey(classType)) {
-                lines.add(4, IMPORT_PACKAGE_TEMPLATE.formatted(importablesMap.get(classType)));
+                lines.add(6, IMPORT_PACKAGE_TEMPLATE.formatted(importablesMap.get(classType)));
             }
         });
 

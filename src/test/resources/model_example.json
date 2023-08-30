@@ -1,19 +1,55 @@
 {
-    "Person": {
-        "firstName": "String",
-        "lastName": "String",
-        "birthdate": "LocalDateTime",
-        "dni": {
-            "primaryKey": true,
-            "type": "String"
-        }
-    },
-    "Bank": {
-        "address": "String",
-        "name": "String",
-        "bankId": {
-            "primaryKey": true,
-            "type": "UUID"
-        }
+  "Person": {
+    "fields": {
+      "firstName": "String",
+      "lastName": "String",
+      "birthdate": "LocalDateTime",
+      "dni": {
+        "primaryKey": true,
+        "type": "String"
+      }
     }
+  },
+  "Account": {
+    "fields": {
+      "client": "Person",
+      "bank": "Bank",
+      "amount": "double",
+      "transactions": "java.util.List<Transaction>",
+      "accountId": {
+        "primaryKey": true,
+        "type": "UUID"
+      }
+    },
+    "finders": {
+      "byClient": {
+        "parameters": [
+          "Person"
+        ],
+        "return": "Account",
+        "isCollection": true
+      }
+    }
+  },
+  "Bank": {
+    "fields": {
+      "address": "String",
+      "name": "String",
+      "bankId": {
+        "primaryKey": true,
+        "type": "UUID"
+      }
+    }
+  },
+  "Transaction": {
+    "fields": {
+      "transactionId": {
+        "primaryKey": true,
+        "type": "UUID"
+      },
+      "date": "LocalDateTime",
+      "amount": "double",
+      "description": "String"
+    }
+  }
 }

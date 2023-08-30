@@ -31,6 +31,7 @@ public class Constants {
     public static final String GROUP_ID = "groupId";
     public static final String PACKAGE = "package";
     public static final String ARTIFACT_ID = "artifactId";
+    public static final String FIELDS = "fields";
     public static final String INJECTS = "injects";
     public static final String COLON = ":";
     public static final String COMMA = ",";
