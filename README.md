@@ -66,6 +66,14 @@ MODEL_DEFINITION.json format
         "primaryKey": true,
         "type": "UUID"
       }
+    },
+    "finders": {
+      "byId": {
+        "parameters": [
+          "String"
+        ],
+        "return": "Bank"
+      }
     }
   },
   "Transaction": {

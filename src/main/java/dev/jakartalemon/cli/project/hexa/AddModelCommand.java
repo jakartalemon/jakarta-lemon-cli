@@ -20,7 +20,9 @@ import dev.jakartalemon.cli.util.FileClassUtil;
 import dev.jakartalemon.cli.util.HttpClientUtil;
 import dev.jakartalemon.cli.util.JsonFileUtil;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonString;
 import jakarta.json.JsonValue;
+import jakarta.json.stream.JsonParser;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import picocli.CommandLine.Command;
@@ -39,16 +41,21 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
+import static dev.jakartalemon.cli.util.Constants.COMMA;
 import static dev.jakartalemon.cli.util.Constants.DOMAIN;
 import static dev.jakartalemon.cli.util.Constants.FIELDS;
+import static dev.jakartalemon.cli.util.Constants.FINDERS;
 import static dev.jakartalemon.cli.util.Constants.IMPORT_PACKAGE_TEMPLATE;
 import static dev.jakartalemon.cli.util.Constants.JAVA;
 import static dev.jakartalemon.cli.util.Constants.MAIN;
 import static dev.jakartalemon.cli.util.Constants.MODEL;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
+import static dev.jakartalemon.cli.util.Constants.PARAMETERS;
 import static dev.jakartalemon.cli.util.Constants.REPOSITORY;
+import static dev.jakartalemon.cli.util.Constants.RETURN;
 import static dev.jakartalemon.cli.util.Constants.SRC;
 import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -146,7 +153,7 @@ public class AddModelCommand implements Callable<Integer> {
                 FileClassUtil.writeFile(projectInfo, packageName, className, lines);
                 log.info("{} class Created", className);
 
-                createRepository(projectInfo, repositoryPath, className, primaryKeyType);
+                createRepository(projectInfo, repositoryPath, className, classDef, primaryKeyType);
             } catch (IOException ex) {
                 log.error(ex.getMessage(), ex);
             }
@@ -186,12 +193,11 @@ public class AddModelCommand implements Callable<Integer> {
 
     private void createRepository(JsonObject projectInfo,
         Path repositoryPath,
-        String className,
+        String className, JsonObject classDef,
         String primaryKeyType) throws IOException {
-        var packageName
-            = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, REPOSITORY);
-        var modelPackage = "%s.%s.%s.%s".formatted(projectInfo.getString(PACKAGE), DOMAIN, MODEL,
-            className);
+        var packageName =
+            PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, REPOSITORY);
+        var modelPackage = "%s.%s.%s.*".formatted(projectInfo.getString(PACKAGE), DOMAIN, MODEL);
         var fileName = "%sRepository".formatted(className);
 
         List<String> lines = new ArrayList<>();
@@ -201,6 +207,29 @@ public class AddModelCommand implements Callable<Integer> {
         lines.add(EMPTY);
         lines.add("public interface %s extends IRepository<%s, %s> {".formatted(fileName, className,
             primaryKeyType));
+        if (classDef.containsKey(FINDERS)) {
+            classDef.getJsonObject(FINDERS).forEach((finderName, finderDescrip) -> {
+                var finderBody = finderDescrip.asJsonObject();
+                var parameters = finderBody.containsKey(PARAMETERS)
+                    ? finderBody.getJsonArray(PARAMETERS).stream()
+                    .map(param -> {
+                        var clazz = ((JsonString) param).getString();
+                        var parameterName = StringUtils.uncapitalize(clazz);
+                        return "%s %s".formatted(clazz, parameterName);
+                    })
+                    .collect(Collectors.joining(COMMA))
+                    : EMPTY;
+                var isCollection = finderBody.getBoolean("isCollection", false);
+                var returnType = "%s<%s>".formatted(isCollection ? "java.util.stream.Stream" :
+                        "java.util.Optional",
+                    finderBody.getString(RETURN));
+                var method = "%s %s finder%s(%s);".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
+                    returnType, StringUtils.capitalize(finderName), parameters);
+                lines.add(method);
+                lines.add(EMPTY);
+            });
+
+        }
         lines.add("}");
         if (importablesMap.containsKey(primaryKeyType)) {
             lines.add(2, IMPORT_PACKAGE_TEMPLATE.formatted(importablesMap.get(primaryKeyType)));
