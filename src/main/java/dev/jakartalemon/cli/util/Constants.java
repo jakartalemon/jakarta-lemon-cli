@@ -63,6 +63,7 @@ public class Constants {
     public static final String IMPORT_PACKAGE_TEMPLATE = "import %s;";
 
     public static final int TAB_SIZE = 4;
+    public static final String SCOPE = "scope";
 
     public static final String JAKARTA_LEMON_HOST_BASE = "https://jakartalemon.dev";
     public static final String JAKARTA_LEMON_CONFIG_URL =
@@ -74,10 +75,16 @@ public class Constants {
         ARTIFACT_ID, "lombok",
         VERSION, "${org.projectlombok.version}"
     );
+    public static final Map<String, String> MOCKITO_DEPENDENCY = Map.of(
+        GROUP_ID, "org.mockito",
+        ARTIFACT_ID, "mockito-junit-jupiter",
+        VERSION, "${mockito.junit.jupiter.version}",
+        SCOPE, "test"
+    );
     public static final Map<String, String> JAKARTA_INJECT_DEPENDENCY = Map.of(
         GROUP_ID, "jakarta.inject",
         ARTIFACT_ID, "jakarta.inject-api",
         VERSION, "2.0.1",
-        "scope", "provided"
+        SCOPE, "provided"
     );
 }

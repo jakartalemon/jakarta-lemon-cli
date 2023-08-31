@@ -41,6 +41,7 @@ import static dev.jakartalemon.cli.util.Constants.JAVA_VERSION;
 import static dev.jakartalemon.cli.util.Constants.LOMBOK_DEPENDENCY;
 import static dev.jakartalemon.cli.util.Constants.MAPPER;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_RELEASE;
+import static dev.jakartalemon.cli.util.Constants.MOCKITO_DEPENDENCY;
 import static dev.jakartalemon.cli.util.Constants.MODEL;
 import static dev.jakartalemon.cli.util.Constants.ORG_MAPSTRUCT;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
@@ -118,7 +119,7 @@ public class CreateHexagonalProject {
             ARTIFACT_ID, artifactId,
             VERSION, version
         )).packaging(JAR).dependencies(List.of(
-            LOMBOK_DEPENDENCY
+            LOMBOK_DEPENDENCY,MOCKITO_DEPENDENCY
         )).properties(Map.of(
             MAVEN_COMPILER_RELEASE, JAVA_VERSION
         )).artifactId(DOMAIN);
@@ -324,12 +325,7 @@ public class CreateHexagonalProject {
                         ARTIFACT_ID, ENTITIES,
                         VERSION, PROJECT_VERSION
                     ),
-                    Map.of(
-                        GROUP_ID, "org.mockito",
-                        ARTIFACT_ID, "mockito-junit-jupiter",
-                        VERSION, "${mockito.junit.jupiter.version}",
-                        "scope", "test"
-                    )
+                    MOCKITO_DEPENDENCY
                 )
             ).properties(
                 Map.of(MAVEN_COMPILER_RELEASE, JAVA_VERSION)
