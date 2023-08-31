@@ -15,6 +15,7 @@
  */
 package dev.jakartalemon.cli.util;
 
+import static dev.jakartalemon.cli.util.Constants.DATABASES;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_LEMON_CONFIG_URL;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
@@ -29,6 +30,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 
@@ -94,5 +96,19 @@ public class HttpClientUtil {
                 getString(key)));
         }
         return importablesMap;
+    }
+
+    public static Optional<JsonObject> getDatabasesConfigs() throws InterruptedException {
+        if (cliConfig == null) {
+            try {
+                cliConfig = HttpClientUtil.getJson(JAKARTA_LEMON_CONFIG_URL, JsonReader::readObject);
+
+            } catch (IOException | URISyntaxException ex) {
+                log.error(ex.getMessage(), ex);
+
+            }
+        }
+        if (cliConfig==null)return Optional.empty();
+        return Optional.ofNullable( cliConfig.getJsonObject(DATABASES));
     }
 }

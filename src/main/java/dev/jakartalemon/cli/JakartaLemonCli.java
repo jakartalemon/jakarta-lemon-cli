@@ -16,40 +16,43 @@
 package dev.jakartalemon.cli;
 
 import dev.jakartalemon.cli.project.CreateProjectCommand;
+import dev.jakartalemon.cli.project.hexa.AddEntityCommand;
 import dev.jakartalemon.cli.project.hexa.AddModelCommand;
-import dev.jakartalemon.cli.project.hexa.AddServiceCommand;
+import dev.jakartalemon.cli.project.hexa.AddUseCaseCommand;
+
 import java.util.concurrent.Callable;
+
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.HelpCommand;
 
 /**
- *
  * @author Diego Silva <diego.silva at apuntesdejava.com>
  */
 @Command(
     name = "jakartalemon",
     mixinStandardHelpOptions = true,
     version = "jakartalemon cli 1.0",
-    description = "Command line interface for manipulation of Jakarta EE projects according to the Jakarta Lemon tool.",
+    description = "Command line interface for manipulation of Jakarta EE projects according to " +
+        "the Jakarta Lemon tool.",
     resourceBundle = "messages",
     subcommands = {
         HelpCommand.class,
         CreateProjectCommand.class,
         AddModelCommand.class,
-        AddServiceCommand.class
+        AddUseCaseCommand.class,
+        AddEntityCommand.class
     }
 )
 public class JakartaLemonCli implements Callable<Integer> {
 
- 
 
     @Override
     public Integer call() throws Exception {
 
         return 0;
     }
- 
+
     public static void main(String... args) {
         int exitCode = new CommandLine(new JakartaLemonCli()).execute(args);
         System.exit(exitCode);

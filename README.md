@@ -26,46 +26,97 @@ addmodel MODEL_DEFINITION.json
 MODEL_DEFINITION.json format 
 ```
 {
-    "Person": {
-        "firstName": "String",
-        "lastName": "String",
-        "birthdate": "LocalDateTime",
-        "dni": {
-            "primaryKey": true,
-            "type": "String"
-        }
-    },
-    "Bank": {
-        "address": "String",
-        "name": "String",
-        "bankId": {
-            "primaryKey": true,
-            "type": "UUID"
-        }
+  "Person": {
+    "fields": {
+      "firstName": "String",
+      "lastName": "String",
+      "birthdate": "LocalDateTime",
+      "dni": {
+        "primaryKey": true,
+        "type": "String"
+      }
     }
+  },
+  "Account": {
+    "fields": {
+      "client": "Person",
+      "bank": "Bank",
+      "amount": "double",
+      "transactions": "java.util.List<Transaction>",
+      "accountId": {
+        "primaryKey": true,
+        "type": "UUID"
+      }
+    },
+    "finders": {
+      "byClient": {
+        "parameters": [
+          "Person"
+        ],
+        "return": "Account",
+        "isCollection": true
+      }
+    }
+  },
+  "Bank": {
+    "fields": {
+      "address": "String",
+      "name": "String",
+      "bankId": {
+        "primaryKey": true,
+        "type": "UUID"
+      }
+    },
+    "finders": {
+      "byId": {
+        "parameters": [
+          "String"
+        ],
+        "return": "Bank"
+      }
+    }
+  },
+  "Transaction": {
+    "fields": {
+      "transactionId": {
+        "primaryKey": true,
+        "type": "UUID"
+      },
+      "date": "LocalDateTime",
+      "amount": "double",
+      "description": "String"
+    }
+  }
 }
 ```
 
-## Add Service
+## Add Use case
 Create service in project folder
 
 ```
-addservice SERVICE_DEFINITION.json
+addusecase USECASE_DEFINITION.json
 
 ```
 
-SERVICE_DEFINITION.json
+USECASE_DEFINITION.json
 ```
 {
     "AtmService": {
-        "withdrawal":{
-            "amount":"double",
-            "customer": "Person"
-        },
-        "payment":{
-            "amount":"double",
-            "customer": "Person"
+        "injects": [
+            "BankRepository"
+        ],
+        "methods": {
+            "withdrawal": {
+                "amount": "double",
+                "customer": "Person",
+                "return": "double"
+            },
+            "payment": {
+                "amount": "double",
+                "customer": "Person"
+            }
         }
     }
 }
+
 ```
