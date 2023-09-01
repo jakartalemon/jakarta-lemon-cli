@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
+import static dev.jakartalemon.cli.util.Constants.CLASSES_IMPORT_TEST;
 import static dev.jakartalemon.cli.util.Constants.COLON;
 import static dev.jakartalemon.cli.util.Constants.COMMA;
 import static dev.jakartalemon.cli.util.Constants.DOMAIN;
@@ -44,9 +45,12 @@ import static dev.jakartalemon.cli.util.Constants.PUBLIC;
 import static dev.jakartalemon.cli.util.Constants.REPOSITORY;
 import static dev.jakartalemon.cli.util.Constants.RETURN;
 import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
+import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING;
+import static dev.jakartalemon.cli.util.Constants.TEST;
 import static dev.jakartalemon.cli.util.Constants.USECASE;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
+import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING_COMMA;
 
 /**
  * @author Diego Silva mailto:diego.silva@apuntesdejava.com
@@ -76,10 +80,52 @@ public class AddUseCaseCommand implements Callable<Integer> {
         return JsonFileUtil.getFileJson(file.toPath())
             .map(structure -> JsonFileUtil.getProjectInfo().map(projectInfo -> {
                 structure.forEach(
-                    (key, classDef) -> createUseCaseClass(projectInfo, key,
-                        classDef.asJsonObject()));
+                    (key, classDef) -> {
+                        createUseCaseClass(projectInfo, key,
+                            classDef.asJsonObject());
+                        createUseCaseTestClass(projectInfo, key,
+                            classDef.asJsonObject());
+                    });
                 return 0;
             }).orElse(1)).orElse(2);
+    }
+
+    private void createUseCaseTestClass(JsonObject projectInfo, String className,
+        JsonObject classDefinition) {
+        try {
+            List<String> lines = new ArrayList<>();
+            var packageName
+                = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, USECASE);
+            lines.add(TEMPLATE_2_STRING_COMMA.formatted(PACKAGE, packageName));
+            lines.add(EMPTY);
+            List<String> classesInject = getClassesInject(projectInfo, classDefinition, lines);
+            CLASSES_IMPORT_TEST.forEach(
+                importClass -> lines.add("import %s;".formatted(importClass)));
+            lines.add(EMPTY);
+            var classTestName = "%sTest".formatted(className);
+            lines.add("@ExtendWith(MockitoExtension.class)");
+            lines.add("%s class %s {".formatted(PUBLIC, classTestName));
+            lines.add(EMPTY);
+            List<String> parameters = new ArrayList<>();
+            classesInject.forEach(classInject -> {
+                lines.add("%s@Mock".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
+                var variableName = StringUtils.uncapitalize(classInject);
+                var declarations = TEMPLATE_2_STRING.formatted(classInject, variableName);
+                lines.add(TEMPLATE_2_STRING_COMMA.formatted(StringUtils.repeat(SPACE, TAB_SIZE),
+                    declarations));
+                parameters.add(variableName);
+            });
+            lines.add(EMPTY);
+
+            lines.add("%s@InjectMocks".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
+            var classNameInstance = StringUtils.uncapitalize(className);
+            lines.add("%s%s %s = new %s(%s);".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
+                className, classNameInstance, className, String.join(COMMA, parameters)));
+            lines.add("}");
+            FileClassUtil.writeClassFile(projectInfo, packageName, classTestName, lines, TEST);
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
+        }
     }
 
     private void createUseCaseClass(JsonObject projectInfo,
@@ -90,30 +136,18 @@ public class AddUseCaseCommand implements Callable<Integer> {
             List<String> lines = new ArrayList<>();
             var packageName
                 = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, USECASE);
-            lines.add("%s %s;".formatted(PACKAGE, packageName));
+            lines.add(TEMPLATE_2_STRING_COMMA.formatted(PACKAGE, packageName));
             lines.add(EMPTY);
             lines.add(
                 "import %s.%s.%s.*;".formatted(projectInfo.getString(PACKAGE), DOMAIN, MODEL));
-            List<String> classesInject = new ArrayList<>();
-            if (classDefinition.containsKey(INJECTS)) {
-                var injects = classDefinition.getJsonArray(INJECTS);
-                for (var i = 0; i < injects.size(); i++) {
-                    var inject = injects.getString(i);
-                    var importInject
-                        = "import %s.%s.%s.%s;".formatted(projectInfo.getString(PACKAGE),
-                        DOMAIN, REPOSITORY, inject);
-                    lines.add(importInject);
-                    classesInject.add(inject);
-                }
-                lines.add(EMPTY);
-            }
+            List<String> classesInject = getClassesInject(projectInfo, classDefinition, lines);
             lines.add("%s class %s {".formatted(PUBLIC, className));
             lines.add(EMPTY);
             if (!classesInject.isEmpty()) {
                 List<String> constructorsParameters = new ArrayList<>();
                 classesInject.forEach(classInject -> {
                     var variableName = StringUtils.uncapitalize(classInject);
-                    var declarations = "%s %s".formatted(classInject, variableName);
+                    var declarations = TEMPLATE_2_STRING.formatted(classInject, variableName);
                     lines.add("%sprivate final %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
                         declarations));
                     constructorsParameters.add(declarations);
@@ -155,7 +189,7 @@ public class AddUseCaseCommand implements Callable<Integer> {
                             lines.add(IMPORT_LINE, IMPORT_PACKAGE_TEMPLATE.formatted(
                                 importablesMap.get(parameterType)));
                         }
-                        return "%s %s".formatted(parameterType,
+                        return TEMPLATE_2_STRING.formatted(parameterType,
                             methodNameKey);
                     }).collect(Collectors.joining(COMMA));
 
@@ -171,11 +205,29 @@ public class AddUseCaseCommand implements Callable<Integer> {
             });
             lines.add("}");
 
-            FileClassUtil.writeFile(projectInfo, packageName, className, lines);
+            FileClassUtil.writeClassFile(projectInfo, packageName, className, lines);
         } catch (IOException ex) {
             log.error(ex.getMessage(), ex);
         }
 
+    }
+
+    private List<String> getClassesInject(JsonObject projectInfo, JsonObject classDefinition,
+        List<String> lines) {
+        List<String> classesInject = new ArrayList<>();
+        if (classDefinition.containsKey(INJECTS)) {
+            var injects = classDefinition.getJsonArray(INJECTS);
+            for (var i = 0; i < injects.size(); i++) {
+                var inject = injects.getString(i);
+                var importInject
+                    = "import %s.%s.%s.%s;".formatted(projectInfo.getString(PACKAGE),
+                    DOMAIN, REPOSITORY, inject);
+                lines.add(importInject);
+                classesInject.add(inject);
+            }
+            lines.add(EMPTY);
+        }
+        return classesInject;
     }
 
 }

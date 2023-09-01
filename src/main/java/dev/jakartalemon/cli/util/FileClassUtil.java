@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 
 import static dev.jakartalemon.cli.util.Constants.DOMAIN;
 import static dev.jakartalemon.cli.util.Constants.JAVA;
@@ -32,9 +33,16 @@ public class FileClassUtil {
 
     }
 
-    public static void writeFile(JsonObject projectInfo, String packageName,
+    public static void writeClassFile(JsonObject projectInfo, String packageName,
         String className, List<String> lines) throws IOException {
-        var classPackage = Path.of(projectInfo.getString(DOMAIN), SRC, MAIN, JAVA);
+        writeClassFile(projectInfo, packageName, className, lines, null);
+    }
+
+    public static void writeClassFile(JsonObject projectInfo, String packageName,
+        String className, List<String> lines, String target) throws IOException {
+        var classPackage = Path.of(projectInfo.getString(DOMAIN), SRC,
+            Optional.ofNullable(target).orElse(MAIN),
+            JAVA);
         var packageNameList = packageName.split("\\.");
         for (var item : packageNameList) {
             classPackage = classPackage.resolve(item);

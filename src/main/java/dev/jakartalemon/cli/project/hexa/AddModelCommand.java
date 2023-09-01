@@ -57,9 +57,11 @@ import static dev.jakartalemon.cli.util.Constants.REPOSITORY;
 import static dev.jakartalemon.cli.util.Constants.RETURN;
 import static dev.jakartalemon.cli.util.Constants.SRC;
 import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
+import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
+import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING_COMMA;
 
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
@@ -151,7 +153,7 @@ public class AddModelCommand implements Callable<Integer> {
         lines.add("}");
         Optional.ofNullable(primaryKeyTypeRef.get()).ifPresentOrElse(primaryKeyType -> {
             try {
-                FileClassUtil.writeFile(projectInfo, packageName, className, lines);
+                FileClassUtil.writeClassFile(projectInfo, packageName, className, lines);
                 log.info("{} class Created", className);
 
                 createRepository(projectInfo, repositoryPath, className, classDef, primaryKeyType);
@@ -172,7 +174,7 @@ public class AddModelCommand implements Callable<Integer> {
                 = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, REPOSITORY);
 
             List<String> lines = new ArrayList<>(br.lines().toList());
-            lines.add(0, "%s %s;".formatted(PACKAGE, packageName));
+            lines.add(0, TEMPLATE_2_STRING_COMMA.formatted(PACKAGE, packageName));
 
             lines.forEach(log::debug);
 
@@ -202,7 +204,7 @@ public class AddModelCommand implements Callable<Integer> {
         var fileName = "%sRepository".formatted(className);
 
         List<String> lines = new ArrayList<>();
-        lines.add("%s %s;".formatted(PACKAGE, packageName));
+        lines.add(TEMPLATE_2_STRING_COMMA.formatted(PACKAGE, packageName));
         lines.add(EMPTY);
         lines.add(IMPORT_PACKAGE_TEMPLATE.formatted(modelPackage));
         lines.add(EMPTY);
@@ -216,7 +218,7 @@ public class AddModelCommand implements Callable<Integer> {
                     .map(param -> {
                         var clazz = ((JsonString) param).getString();
                         var parameterName = StringUtils.uncapitalize(clazz);
-                        return "%s %s".formatted(clazz, parameterName);
+                        return TEMPLATE_2_STRING.formatted(clazz, parameterName);
                     })
                     .collect(Collectors.joining(COMMA))
                     : EMPTY;
