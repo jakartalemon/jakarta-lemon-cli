@@ -16,8 +16,10 @@
 package dev.jakartalemon.cli.project.hexa;
 
 import dev.jakartalemon.cli.util.Constants;
+import dev.jakartalemon.cli.util.DependenciesUtil;
 import dev.jakartalemon.cli.util.HttpClientUtil;
 import dev.jakartalemon.cli.util.JsonFileUtil;
+import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
@@ -25,6 +27,9 @@ import picocli.CommandLine;
 import java.io.File;
 import java.util.Map;
 import java.util.concurrent.Callable;
+
+import static dev.jakartalemon.cli.util.Constants.ADAPTERS;
+import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
 
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
@@ -64,8 +69,29 @@ public class AddEntityCommand implements Callable<Integer> {
     }
 
     private void createDatabaseConfig() {
+        JsonFileUtil.getFileJson(file.toPath())
+            .ifPresent(config -> JsonFileUtil.getProjectInfo().ifPresent(projectInfo -> {
+                var storageType = config.getString("storageType");
+                var configDb = databasesConfigs.getJsonObject(storageType);
+                log.debug("storageType:{}", storageType);
+                log.debug("configDb:{}", configDb);
+                var versionResponse =
+                    DependenciesUtil.getLastVersionDependency(configDb.getString(
+                        "search"));
+                log.debug("version:{}", versionResponse);
+                versionResponse.ifPresent(
+                    dependency -> PomUtil.getInstance().addDependency(dependency,INFRASTRUCTURE,
+                        ADAPTERS));
+            }));
+
+        /*
+        var connectionInfo = databasesConfigs.getJsonObject("connectionInfo");
+
+        log.debug("connectionInfo:{}", connectionInfo);
+        */
     }
 
     private void createEntityClass(JsonObject projectInfo, String key, JsonObject jsonObject) {
+
     }
 }

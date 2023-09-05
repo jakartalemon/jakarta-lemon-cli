@@ -106,21 +106,20 @@ public class AddUseCaseCommand implements Callable<Integer> {
             lines.add("@ExtendWith(MockitoExtension.class)");
             lines.add("%s class %s {".formatted(PUBLIC, classTestName));
             lines.add(EMPTY);
-            List<String> parameters = new ArrayList<>();
+
             classesInject.forEach(classInject -> {
                 lines.add("%s@Mock".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
                 var variableName = StringUtils.uncapitalize(classInject);
                 var declarations = TEMPLATE_2_STRING.formatted(classInject, variableName);
                 lines.add(TEMPLATE_2_STRING_COMMA.formatted(StringUtils.repeat(SPACE, TAB_SIZE),
                     declarations));
-                parameters.add(variableName);
             });
             lines.add(EMPTY);
 
             lines.add("%s@InjectMocks".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
             var classNameInstance = StringUtils.uncapitalize(className);
-            lines.add("%s%s %s = new %s(%s);".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
-                className, classNameInstance, className, String.join(COMMA, parameters)));
+            lines.add("%s%s %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
+                className, classNameInstance));
             lines.add("}");
             FileClassUtil.writeClassFile(projectInfo, packageName, classTestName, lines, TEST);
         } catch (IOException e) {

@@ -18,18 +18,28 @@ package dev.jakartalemon.cli.util;
 import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.util.DocumentXmlUtil.ElementBuilder;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonString;
 import jakarta.json.JsonValue;
 import lombok.extern.slf4j.Slf4j;
+import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
 import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
+import static dev.jakartalemon.cli.util.Constants.DEPENDENCY;
 import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
+import static dev.jakartalemon.cli.util.Constants.JAVA;
+import static dev.jakartalemon.cli.util.Constants.MAIN;
+import static dev.jakartalemon.cli.util.Constants.SRC;
+import static dev.jakartalemon.cli.util.Constants.TEST;
 import static dev.jakartalemon.cli.util.Constants.VERSION;
+import static javax.xml.xpath.XPathConstants.NODESET;
 
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
@@ -46,11 +56,10 @@ public class PomUtil {
 
     /**
      * @param modulePath the value of modulePath
-     * @param pomModel
+     * @param pomModel   POM Model
      * @return
      */
-    public Optional<Path> createPom(Path modulePath,
-        PomModel pomModel) {
+    public Optional<Path> createPom(Path modulePath, PomModel pomModel) {
         try {
             Files.createDirectories(modulePath);
             var pomPath = modulePath.resolve("pom.xml");
@@ -59,41 +68,35 @@ public class PomUtil {
                 .addAttribute("xmlns", "http://maven.apache.org/POM/4.0.0")
                 .addAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
                 .addAttribute("xsi:schemaLocation",
-                    "http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0"
-                        + ".xsd");
+                    "http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0" +
+                        ".xsd");
             Optional.ofNullable(pomModel.getModelVersion()).ifPresent(
-                modelVersion -> projectElemBuilder.addChild(ElementBuilder.newInstance(
-                        "modelVersion")
-                    .setTextContent(modelVersion)));
+                modelVersion -> projectElemBuilder.addChild(
+                    ElementBuilder.newInstance("modelVersion").setTextContent(modelVersion)));
             //creando groupId
-            Optional.ofNullable(pomModel.getGroupId()).ifPresent(groupId -> projectElemBuilder.
-                addChild(
-                    ElementBuilder.newInstance(GROUP_ID)
-                        .setTextContent(groupId)));
+            Optional.ofNullable(pomModel.getGroupId()).ifPresent(
+                groupId -> projectElemBuilder.addChild(
+                    ElementBuilder.newInstance(GROUP_ID).setTextContent(groupId)));
             //creando parent
             Optional.ofNullable(pomModel.getParent()).ifPresent(parent -> {
                 var parentElementBuilder = ElementBuilder.newInstance("parent");
                 projectElemBuilder.addChild(parentElementBuilder);
-                parent.forEach(
-                    (key, value) -> parentElementBuilder.addChild(ElementBuilder.newInstance(key)
-                        .setTextContent(value)));
+                parent.forEach((key, value) -> parentElementBuilder.addChild(
+                    ElementBuilder.newInstance(key).setTextContent(value)));
             });
-            Optional.ofNullable(pomModel.getVersion()).ifPresent(version -> projectElemBuilder.
-                addChild(
-                    ElementBuilder.newInstance(VERSION)
-                        .setTextContent(version)));
-            projectElemBuilder
-                .addChild(ElementBuilder.newInstance(ARTIFACT_ID).setTextContent(pomModel.
-                    getArtifactId()))
-                .addChild(ElementBuilder.newInstance("packaging").setTextContent(pomModel.
-                    getPackaging()));
+            Optional.ofNullable(pomModel.getVersion()).ifPresent(
+                version -> projectElemBuilder.addChild(
+                    ElementBuilder.newInstance(VERSION).setTextContent(version)));
+            projectElemBuilder.addChild(
+                    ElementBuilder.newInstance(ARTIFACT_ID).setTextContent(pomModel.getArtifactId()))
+                .addChild(ElementBuilder.newInstance("packaging")
+                    .setTextContent(pomModel.getPackaging()));
             //creando modules
             Optional.ofNullable(pomModel.getModules()).ifPresent(modules -> {
                 var modulesElementBuilder = ElementBuilder.newInstance("modules");
                 projectElemBuilder.addChild(modulesElementBuilder);
                 modules.forEach(module -> modulesElementBuilder.addChild(
-                    ElementBuilder.newInstance("module").setTextContent(module)
-                ));
+                    ElementBuilder.newInstance("module").setTextContent(module)));
             });
             //creando dependencias
             Optional.ofNullable(pomModel.getDependencies()).ifPresent(dependencies -> {
@@ -101,21 +104,19 @@ public class PomUtil {
                 projectElemBuilder.addChild(dependenciesElementBuilder);
 
                 dependencies.forEach(dependency -> {
-                    var dependencyElementBuilder = ElementBuilder.newInstance("dependency");
+                    var dependencyElementBuilder = ElementBuilder.newInstance(DEPENDENCY);
                     dependenciesElementBuilder.addChild(dependencyElementBuilder);
 
                     dependency.forEach((key, value) -> dependencyElementBuilder.addChild(
-                        ElementBuilder.newInstance(key)
-                            .setTextContent(value)));
+                        ElementBuilder.newInstance(key).setTextContent(value)));
                 });
             });
             //creando properties
             Optional.ofNullable(pomModel.getProperties()).ifPresent(properties -> {
                 var propsElementBuilder = ElementBuilder.newInstance("properties");
                 projectElemBuilder.addChild(propsElementBuilder);
-                properties.forEach(
-                    (key, value) -> propsElementBuilder.addChild(ElementBuilder.newInstance(key)
-                        .setTextContent(value)));
+                properties.forEach((key, value) -> propsElementBuilder.addChild(
+                    ElementBuilder.newInstance(key).setTextContent(value)));
             });
             //creado seccion build
             Optional.ofNullable(pomModel.getBuildModel()).ifPresent(build -> {
@@ -162,12 +163,11 @@ public class PomUtil {
 
     public void createJavaProjectStructure(Path sourcePath, String... packagesName) {
         try {
-            var created
-                =
-                Files.createDirectories(sourcePath.resolve("src").resolve("main").resolve("java"));
-            Files.createDirectories(sourcePath.resolve("src").resolve("main").resolve("resources"));
-            Files.createDirectories(sourcePath.resolve("src").resolve("test").resolve("java"));
-            Files.createDirectories(sourcePath.resolve("src").resolve("test").resolve("resources"));
+            var created =
+                Files.createDirectories(sourcePath.resolve(SRC).resolve(MAIN).resolve(JAVA));
+            Files.createDirectories(sourcePath.resolve(SRC).resolve(MAIN).resolve("resources"));
+            Files.createDirectories(sourcePath.resolve(SRC).resolve(TEST).resolve(JAVA));
+            Files.createDirectories(sourcePath.resolve(SRC).resolve(TEST).resolve("resources"));
             for (var packageName : packagesName) {
                 var packagesDir = packageName.split("\\.");
                 var packagePath = created;
@@ -179,6 +179,37 @@ public class PomUtil {
         } catch (IOException ex) {
             log.error(ex.getMessage(), ex);
         }
+
+    }
+
+    public void addDependency(JsonObject dependency, String... paths) {
+        var pathXml = Path.of(".", paths).resolve("pom.xml");
+
+        DocumentXmlUtil.openDocument(pathXml)
+            .ifPresent(documentXml -> {
+                try {
+                    var xPath = XPathFactory.newInstance().newXPath();
+                    var artifactId = dependency.getString("artifactId");
+                    var dependencyExp =
+                        "/project/dependencies/dependency/artifactId[text()='%s']".formatted(
+                            artifactId);
+
+                    var nodeList = (NodeList) xPath.compile(dependencyExp).evaluate(documentXml,
+                        NODESET);
+                    log.debug("nodeList:{}", nodeList);
+                    if (nodeList.getLength() == 0) {
+                        DocumentXmlUtil.createElement(documentXml, "/project/dependencies",
+                            DEPENDENCY).ifPresent(dependencyElem -> dependency.forEach(
+                            (key, value) -> DocumentXmlUtil.createElement(documentXml,
+                                    dependencyElem, key)
+                                .ifPresent(elem -> elem.setTextContent(
+                                    ((JsonString) value).getString()))));
+                        DocumentXmlUtil.saveDocument(pathXml, documentXml);
+                    }
+                } catch (XPathExpressionException e) {
+                    log.error(e.getMessage(), e);
+                }
+            });
 
     }
 

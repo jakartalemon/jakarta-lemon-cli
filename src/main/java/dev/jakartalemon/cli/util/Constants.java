@@ -72,6 +72,7 @@ public class Constants {
         "org.mockito.Mock",
         "org.mockito.junit.jupiter.MockitoExtension");
 
+    public static final String DEPENDENCY = "dependency";
     public static final String PROJECT_INFO_JSON = "project_info.json";
     public static final Map<String, String> LOMBOK_DEPENDENCY = Map.of(
         GROUP_ID, "org.projectlombok",
@@ -90,7 +91,22 @@ public class Constants {
         VERSION, "2.0.1",
         SCOPE, "provided"
     );
+    public static final String DOCS = "docs";
+    public final static String DEPENDENCY_GROUP_ID = "groupId";
+    public final static String DEPENDENCY_ARTIFACT_ID = "artifactId";
+    public final static String DEPENDENCY_VERSION = "version";
+    public static final String G_KEY = "g";
+    public static final String A_KEY = "a";
+    public static final String LATEST_VERSION = "latestVersion";
 
+    public static final String RESPONSE = "response";
+    /**
+     * It is the query string to look up the dependencies in the Maven repository.
+     * <a href="https://central.sonatype.org/search/rest-api-guide/">REST API Maven Query</a>
+     * Value {@code https://search.maven.org/solrsearch/select?q=}
+     */
+
+    public static final String QUERY_MAVEN_URL = "https://search.maven.org/solrsearch/select?";
     private Constants() {
     }
 }
