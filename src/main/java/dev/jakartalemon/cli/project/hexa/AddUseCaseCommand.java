@@ -79,19 +79,20 @@ public class AddUseCaseCommand implements Callable<Integer> {
     public Integer call() throws Exception {
         return JsonFileUtil.getFileJson(file.toPath())
             .map(structure -> JsonFileUtil.getProjectInfo().map(projectInfo -> {
-                structure.forEach(
-                    (key, classDef) -> {
-                        createUseCaseClass(projectInfo, key,
-                            classDef.asJsonObject());
-                        createUseCaseTestClass(projectInfo, key,
-                            classDef.asJsonObject());
-                    });
-                return 0;
-            }).orElse(1)).orElse(2);
+            structure.forEach(
+                (key, classDef) -> {
+                    createUseCaseClass(projectInfo, key,
+                        classDef.asJsonObject());
+                    createUseCaseTestClass(projectInfo, key,
+                        classDef.asJsonObject());
+                });
+            return 0;
+        }).orElse(1)).orElse(2);
     }
 
-    private void createUseCaseTestClass(JsonObject projectInfo, String className,
-        JsonObject classDefinition) {
+    private void createUseCaseTestClass(JsonObject projectInfo,
+                                        String className,
+                                        JsonObject classDefinition) {
         try {
             List<String> lines = new ArrayList<>();
             var packageName
@@ -121,15 +122,15 @@ public class AddUseCaseCommand implements Callable<Integer> {
             lines.add("%s%s %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
                 className, classNameInstance));
             lines.add("}");
-            FileClassUtil.writeClassFile(projectInfo, packageName, classTestName, lines, TEST);
+            FileClassUtil.writeClassFile(projectInfo, TEST, packageName, classTestName, lines,DOMAIN);
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }
     }
 
     private void createUseCaseClass(JsonObject projectInfo,
-        String className,
-        JsonObject classDefinition) {
+                                    String className,
+                                    JsonObject classDefinition) {
         try {
             log.info("Creating {} use case class", className);
             List<String> lines = new ArrayList<>();
@@ -204,15 +205,16 @@ public class AddUseCaseCommand implements Callable<Integer> {
             });
             lines.add("}");
 
-            FileClassUtil.writeClassFile(projectInfo, packageName, className, lines);
+            FileClassUtil.writeClassFile(projectInfo, packageName, className, lines, DOMAIN);
         } catch (IOException ex) {
             log.error(ex.getMessage(), ex);
         }
 
     }
 
-    private List<String> getClassesInject(JsonObject projectInfo, JsonObject classDefinition,
-        List<String> lines) {
+    private List<String> getClassesInject(JsonObject projectInfo,
+                                          JsonObject classDefinition,
+                                          List<String> lines) {
         List<String> classesInject = new ArrayList<>();
         if (classDefinition.containsKey(INJECTS)) {
             var injects = classDefinition.getJsonArray(INJECTS);
@@ -220,7 +222,7 @@ public class AddUseCaseCommand implements Callable<Integer> {
                 var inject = injects.getString(i);
                 var importInject
                     = "import %s.%s.%s.%s;".formatted(projectInfo.getString(PACKAGE),
-                    DOMAIN, REPOSITORY, inject);
+                        DOMAIN, REPOSITORY, inject);
                 lines.add(importInject);
                 classesInject.add(inject);
             }

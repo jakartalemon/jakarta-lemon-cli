@@ -20,29 +20,46 @@ import jakarta.json.JsonObject;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
-import static dev.jakartalemon.cli.util.Constants.DOMAIN;
 import static dev.jakartalemon.cli.util.Constants.JAVA;
 import static dev.jakartalemon.cli.util.Constants.MAIN;
 import static dev.jakartalemon.cli.util.Constants.SRC;
 
 public class FileClassUtil {
+
     private FileClassUtil() {
 
     }
 
-    public static void writeClassFile(JsonObject projectInfo, String packageName,
-        String className, List<String> lines) throws IOException {
-        writeClassFile(projectInfo, packageName, className, lines, null);
+    public static void writeClassFile(JsonObject projectInfo,
+                                      String packageName,
+                                      String className,
+                                      List<String> lines,
+                                      String... module) throws IOException {
+        writeClassFile(projectInfo, null, packageName, className, lines, module);
     }
 
-    public static void writeClassFile(JsonObject projectInfo, String packageName,
-        String className, List<String> lines, String target) throws IOException {
-        var classPackage = Path.of(projectInfo.getString(DOMAIN), SRC,
-            Optional.ofNullable(target).orElse(MAIN),
-            JAVA);
+    public static void writeClassFile(JsonObject projectInfo,
+                                      String target,
+                                      String packageName,
+                                      String className,
+                                      List<String> lines,
+                                      String... module) throws IOException {
+        var rootModule = module[0];
+        var classPackage = Path.of(projectInfo.getString(rootModule));
+        AtomicReference<Path> atomicPath = new AtomicReference<>(classPackage);
+        Arrays.stream(module).sequential().skip(1).forEach(mod -> {
+            var path = atomicPath.get();
+            path = path.resolve(mod);
+            atomicPath.set(path);
+        });
+        classPackage
+            = atomicPath.get().resolve(SRC).resolve(Optional.ofNullable(target).orElse(MAIN))
+                .resolve(JAVA);
         var packageNameList = packageName.split("\\.");
         for (var item : packageNameList) {
             classPackage = classPackage.resolve(item);

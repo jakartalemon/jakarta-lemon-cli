@@ -45,23 +45,22 @@ public class DependenciesUtil {
      *
      * @param query Query string that is sent to the Maven API
      * @return JSON object with the dependency found, or {@link Optional#empty()} if not found.
+     * @throws java.lang.InterruptedException
+     * @throws java.io.IOException
+     * @throws java.net.URISyntaxException
      */
-    public static Optional<JsonObject> getLastVersionDependency(String query) {
-        try {
-            String uri = QUERY_MAVEN_URL + query;
-            var jsonResp = HttpClientUtil.getJson(uri, JsonReader::readObject);
-            var responseJson = jsonResp.getJsonObject(RESPONSE);
-            var docsJson = responseJson.getJsonArray(DOCS);
-            var docJson = docsJson.get(0).asJsonObject();
-            return Optional.of(Json.createObjectBuilder()
-                .add(DEPENDENCY_GROUP_ID, docJson.getString(G_KEY))
-                .add(DEPENDENCY_ARTIFACT_ID, docJson.getString(A_KEY))
-                .add(DEPENDENCY_VERSION, docJson.getString(LATEST_VERSION))
-                .build());
+    public static Optional<JsonObject> getLastVersionDependency(String query)
+        throws InterruptedException, IOException, URISyntaxException {
+        String uri = QUERY_MAVEN_URL + query;
+        var jsonResp = HttpClientUtil.getJson(uri, JsonReader::readObject);
+        var responseJson = jsonResp.getJsonObject(RESPONSE);
+        var docsJson = responseJson.getJsonArray(DOCS);
+        var docJson = docsJson.get(0).asJsonObject();
+        return Optional.of(Json.createObjectBuilder()
+            .add(DEPENDENCY_GROUP_ID, docJson.getString(G_KEY))
+            .add(DEPENDENCY_ARTIFACT_ID, docJson.getString(A_KEY))
+            .add(DEPENDENCY_VERSION, docJson.getString(LATEST_VERSION))
+            .build());
 
-        } catch (InterruptedException | IOException | URISyntaxException ex) {
-            log.error(ex.getMessage(), ex);
-        }
-        return Optional.empty();
     }
 }

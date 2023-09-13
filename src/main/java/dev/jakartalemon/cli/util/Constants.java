@@ -47,8 +47,8 @@ public class Constants {
     public static final String JAR = "jar";
     public static final String ADAPTERS = "adapters";
     public static final String USECASE = "usecase";
-    public static final String TEMPLATE_2_STRING="%s %s";
-    public static final String TEMPLATE_2_STRING_COMMA="%s %s;";
+    public static final String TEMPLATE_2_STRING = "%s %s";
+    public static final String TEMPLATE_2_STRING_COMMA = "%s %s;";
     public static final String MODEL = "model";
     public static final String MAPPER = "mapper";
     public static final String JAVA_VERSION = "17";
@@ -58,6 +58,12 @@ public class Constants {
     public static final String TEST = "test";
     public static final String JAVA = "java";
     public static final String PACKAGE_TEMPLATE = "%s.%s.%s";
+    public static final String JAKARTA_ENTERPRISE="jakarta.enterprise";
+    public static final String JAKARTA_ANOTATION="jakarta.annotation";
+    public static final String JAKARTA_CDI_API_VERSION_KEY = "jakarta.enterprise.cdi-api.version";
+    public static final String JAKARTA_ANOTATION_API_VERSION_KEY = "jakarta.annotation-api.version";
+    public static final String JAKARTA_ANOTATION_API = "jakarta.annotation-api";
+    public static final String JAKARTA_CDI_API = "jakarta.enterprise.cdi-api";
     public static final String PUBLIC = "public";
     public static final String RETURN = "return";
     public static final String IMPORT_PACKAGE_TEMPLATE = "import %s;";
@@ -107,6 +113,7 @@ public class Constants {
      */
 
     public static final String QUERY_MAVEN_URL = "https://search.maven.org/solrsearch/select?";
+
     private Constants() {
     }
 }
