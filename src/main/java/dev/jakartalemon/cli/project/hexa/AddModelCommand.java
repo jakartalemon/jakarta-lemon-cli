@@ -153,7 +153,7 @@ public class AddModelCommand implements Callable<Integer> {
         lines.add("}");
         Optional.ofNullable(primaryKeyTypeRef.get()).ifPresentOrElse(primaryKeyType -> {
             try {
-                FileClassUtil.writeClassFile(projectInfo, packageName, className, lines);
+                FileClassUtil.writeClassFile(projectInfo, packageName, className, lines, DOMAIN);
                 log.info("{} class Created", className);
 
                 createRepository(projectInfo, repositoryPath, className, classDef, primaryKeyType);

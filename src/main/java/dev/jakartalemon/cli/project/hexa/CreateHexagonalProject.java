@@ -28,30 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static dev.jakartalemon.cli.project.constants.Archetype.HEXA;
-import static dev.jakartalemon.cli.util.Constants.ADAPTERS;
-import static dev.jakartalemon.cli.util.Constants.APPLICATION;
-import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
-import static dev.jakartalemon.cli.util.Constants.DOMAIN;
-import static dev.jakartalemon.cli.util.Constants.ENTITIES;
-import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
-import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
-import static dev.jakartalemon.cli.util.Constants.JAKARTA_INJECT_DEPENDENCY;
-import static dev.jakartalemon.cli.util.Constants.JAR;
-import static dev.jakartalemon.cli.util.Constants.JAVA_VERSION;
-import static dev.jakartalemon.cli.util.Constants.LOMBOK_DEPENDENCY;
-import static dev.jakartalemon.cli.util.Constants.MAPPER;
-import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_RELEASE;
-import static dev.jakartalemon.cli.util.Constants.MOCKITO_DEPENDENCY;
-import static dev.jakartalemon.cli.util.Constants.MODEL;
-import static dev.jakartalemon.cli.util.Constants.ORG_MAPSTRUCT;
-import static dev.jakartalemon.cli.util.Constants.PACKAGE;
-import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
-import static dev.jakartalemon.cli.util.Constants.POM;
-import static dev.jakartalemon.cli.util.Constants.PROJECT_GROUP_ID;
-import static dev.jakartalemon.cli.util.Constants.PROJECT_VERSION;
-import static dev.jakartalemon.cli.util.Constants.REPOSITORY;
-import static dev.jakartalemon.cli.util.Constants.USECASE;
-import static dev.jakartalemon.cli.util.Constants.VERSION;
+import static dev.jakartalemon.cli.util.Constants.*;
 
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
@@ -84,7 +61,9 @@ public class CreateHexagonalProject {
                 MAVEN_COMPILER_RELEASE, JAVA_VERSION,
                 "mockito.junit.jupiter.version", "5.4.0",
                 "org.projectlombok.version", "1.18.28",
-                "org.mapstruct.version", "1.5.5.Final"
+                "org.mapstruct.version", "1.5.5.Final",
+                JAKARTA_CDI_API_VERSION_KEY, "4.0.1",
+                JAKARTA_ANOTATION_API_VERSION_KEY, "2.1.0"
             ));
         PomUtil.getInstance().createPom(projectPath, projectPom.build());
 
@@ -119,7 +98,7 @@ public class CreateHexagonalProject {
             ARTIFACT_ID, artifactId,
             VERSION, version
         )).packaging(JAR).dependencies(List.of(
-            LOMBOK_DEPENDENCY,MOCKITO_DEPENDENCY
+            LOMBOK_DEPENDENCY, MOCKITO_DEPENDENCY
         )).properties(Map.of(
             MAVEN_COMPILER_RELEASE, JAVA_VERSION
         )).artifactId(DOMAIN);
@@ -137,7 +116,7 @@ public class CreateHexagonalProject {
                     PACKAGE_TEMPLATE.formatted(packageName, DOMAIN, MODEL));
             PomUtil.getInstance().
                 createJavaProjectStructure(parent,
-                    PACKAGE_TEMPLATE.formatted(packageName ,DOMAIN,USECASE));
+                    PACKAGE_TEMPLATE.formatted(packageName, DOMAIN, USECASE));
         });
         return pomPath;
     }
@@ -390,6 +369,14 @@ public class CreateHexagonalProject {
                         GROUP_ID, PROJECT_GROUP_ID,
                         ARTIFACT_ID, MAPPER,
                         VERSION, PROJECT_VERSION
+                    ), Map.of(
+                        GROUP_ID, JAKARTA_ENTERPRISE,
+                        ARTIFACT_ID, JAKARTA_CDI_API,
+                        VERSION, "${%s}".formatted(JAKARTA_CDI_API_VERSION_KEY)
+                    ), Map.of(
+                        GROUP_ID, JAKARTA_ANOTATION,
+                        ARTIFACT_ID, JAKARTA_ANOTATION_API,
+                        VERSION, "${%s}".formatted(JAKARTA_ANOTATION_API_VERSION_KEY)
                     )
                 )
             ).properties(

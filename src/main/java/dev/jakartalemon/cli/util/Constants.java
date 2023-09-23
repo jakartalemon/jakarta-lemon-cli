@@ -47,8 +47,8 @@ public class Constants {
     public static final String JAR = "jar";
     public static final String ADAPTERS = "adapters";
     public static final String USECASE = "usecase";
-    public static final String TEMPLATE_2_STRING="%s %s";
-    public static final String TEMPLATE_2_STRING_COMMA="%s %s;";
+    public static final String TEMPLATE_2_STRING = "%s %s";
+    public static final String TEMPLATE_2_STRING_COMMA = "%s %s;";
     public static final String MODEL = "model";
     public static final String MAPPER = "mapper";
     public static final String JAVA_VERSION = "17";
@@ -58,6 +58,12 @@ public class Constants {
     public static final String TEST = "test";
     public static final String JAVA = "java";
     public static final String PACKAGE_TEMPLATE = "%s.%s.%s";
+    public static final String JAKARTA_ENTERPRISE="jakarta.enterprise";
+    public static final String JAKARTA_ANOTATION="jakarta.annotation";
+    public static final String JAKARTA_CDI_API_VERSION_KEY = "jakarta.enterprise.cdi-api.version";
+    public static final String JAKARTA_ANOTATION_API_VERSION_KEY = "jakarta.annotation-api.version";
+    public static final String JAKARTA_ANOTATION_API = "jakarta.annotation-api";
+    public static final String JAKARTA_CDI_API = "jakarta.enterprise.cdi-api";
     public static final String PUBLIC = "public";
     public static final String RETURN = "return";
     public static final String IMPORT_PACKAGE_TEMPLATE = "import %s;";
@@ -72,6 +78,7 @@ public class Constants {
         "org.mockito.Mock",
         "org.mockito.junit.jupiter.MockitoExtension");
 
+    public static final String DEPENDENCY = "dependency";
     public static final String PROJECT_INFO_JSON = "project_info.json";
     public static final Map<String, String> LOMBOK_DEPENDENCY = Map.of(
         GROUP_ID, "org.projectlombok",
@@ -90,6 +97,22 @@ public class Constants {
         VERSION, "2.0.1",
         SCOPE, "provided"
     );
+    public static final String DOCS = "docs";
+    public final static String DEPENDENCY_GROUP_ID = "groupId";
+    public final static String DEPENDENCY_ARTIFACT_ID = "artifactId";
+    public final static String DEPENDENCY_VERSION = "version";
+    public static final String G_KEY = "g";
+    public static final String A_KEY = "a";
+    public static final String LATEST_VERSION = "latestVersion";
+
+    public static final String RESPONSE = "response";
+    /**
+     * It is the query string to look up the dependencies in the Maven repository.
+     * <a href="https://central.sonatype.org/search/rest-api-guide/">REST API Maven Query</a>
+     * Value {@code https://search.maven.org/solrsearch/select?q=}
+     */
+
+    public static final String QUERY_MAVEN_URL = "https://search.maven.org/solrsearch/select?";
 
     private Constants() {
     }
