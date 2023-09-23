@@ -29,6 +29,8 @@ import java.nio.file.Path;
 import static dev.jakartalemon.cli.util.Constants.PROJECT_INFO_JSON;
 
 /**
+ * Subcommand to create projects
+ *
  * @author Diego Silva <diego.silva at apuntesdejava.com>
  */
 @CommandLine.Command(
@@ -79,6 +81,9 @@ public class CreateProjectCommand implements Runnable {
     @CommandLine.ParentCommand
     private JakartaLemonCli jakartaLemonCli;
 
+    /**
+     * Main method with which the subcommand is executed
+     */
     @Override
     public void run() {
         try {
@@ -93,8 +98,9 @@ public class CreateProjectCommand implements Runnable {
                 packageName = groupId + '.' + artifactId;
             }
             switch (archetype) {
-                case HEXA -> CreateHexagonalProject.getInstance()
-                    .createProject(created, groupId, artifactId, packageName).ifPresent(
+                case HEXA ->
+                    CreateHexagonalProject.getInstance()
+                        .createProject(created, groupId, artifactId, packageName).ifPresent(
                         projectInfo -> {
                             try {
                                 Files.writeString(projectInfoPath, projectInfo.toString());

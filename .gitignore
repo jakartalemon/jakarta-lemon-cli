@@ -214,3 +214,5 @@ nbdist/
 /nbactions.xml
 /nb-configuration.xml
 target
+.scannerwork
+/check-issues.bat

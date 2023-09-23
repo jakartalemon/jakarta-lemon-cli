@@ -27,14 +27,16 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.HelpCommand;
 
 /**
+ * Jakarta Lemon Main Command Class
+ *
  * @author Diego Silva <diego.silva at apuntesdejava.com>
  */
 @Command(
     name = "jakartalemon",
     mixinStandardHelpOptions = true,
     version = "jakartalemon cli 1.0",
-    description = "Command line interface for manipulation of Jakarta EE projects according to " +
-        "the Jakarta Lemon tool.",
+    description = "Command line interface for manipulation of Jakarta EE projects according to "
+    + "the Jakarta Lemon tool.",
     resourceBundle = "messages",
     subcommands = {
         HelpCommand.class,
@@ -46,13 +48,21 @@ import picocli.CommandLine.HelpCommand;
 )
 public class JakartaLemonCli implements Callable<Integer> {
 
-
+    /**
+     * Main method that delegates execution to subcommands
+     * @return 0
+     * @throws Exception If corrus
+     */
     @Override
     public Integer call() throws Exception {
 
         return 0;
     }
 
+    /**
+     * Application main method
+     * @param args main args
+     */
     public static void main(String... args) {
         int exitCode = new CommandLine(new JakartaLemonCli()).execute(args);
         System.exit(exitCode);

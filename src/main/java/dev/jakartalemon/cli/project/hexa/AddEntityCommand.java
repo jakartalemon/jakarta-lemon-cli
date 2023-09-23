@@ -17,11 +17,13 @@ package dev.jakartalemon.cli.project.hexa;
 
 import dev.jakartalemon.cli.util.Constants;
 import dev.jakartalemon.cli.util.DependenciesUtil;
+import dev.jakartalemon.cli.util.FileClassUtil;
 import dev.jakartalemon.cli.util.HttpClientUtil;
 import dev.jakartalemon.cli.util.JsonFileUtil;
 import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import picocli.CommandLine;
 
 import java.io.File;
@@ -38,8 +40,6 @@ import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
 import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
 import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING_COMMA;
-import dev.jakartalemon.cli.util.FileClassUtil;
-import org.apache.commons.lang3.StringUtils;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
 
@@ -141,7 +141,7 @@ public class AddEntityCommand implements Callable<Integer> {
 
             lines.add("}");
             FileClassUtil.writeClassFile(projectInfo, packageName, fileClassName,
-                lines, INFRASTRUCTURE,ADAPTERS);
+                lines, INFRASTRUCTURE, ADAPTERS);
 
         } catch (IOException ex) {
             log.error(ex.getMessage(), ex);
