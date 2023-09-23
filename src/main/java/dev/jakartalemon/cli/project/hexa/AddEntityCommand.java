@@ -22,6 +22,7 @@ import dev.jakartalemon.cli.util.HttpClientUtil;
 import dev.jakartalemon.cli.util.JsonFileUtil;
 import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonValue;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import picocli.CommandLine;
@@ -39,7 +40,6 @@ import static dev.jakartalemon.cli.util.Constants.ENTITIES;
 import static dev.jakartalemon.cli.util.Constants.ENTITY;
 import static dev.jakartalemon.cli.util.Constants.FIELDS;
 import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
-import static dev.jakartalemon.cli.util.Constants.LENGTH;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_PERSISTENCE_API;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
@@ -47,7 +47,7 @@ import static dev.jakartalemon.cli.util.Constants.PRIMARY_KEY;
 import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
 import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING_COMMA;
 import static dev.jakartalemon.cli.util.Constants.TYPE;
-import jakarta.json.JsonValue;
+import static dev.jakartalemon.cli.util.LinesUtils.removeLastComma;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
 
@@ -63,6 +63,8 @@ import static org.apache.commons.lang3.StringUtils.SPACE;
 @Slf4j
 public class AddEntityCommand implements Callable<Integer> {
 
+    private static final String IMPORT_COLUMN = "import jakarta.persistence.Column;";
+
     private final Map<String, String> importablesMap;
     private final JsonObject databasesConfigs;
 
@@ -71,6 +73,18 @@ public class AddEntityCommand implements Callable<Integer> {
         descriptionKey = "entity_definition"
     )
     private File file;
+    private final List<String> props = List.of("url", "password", "user");
+    private Map<String, Class> columnProps = Map.of(
+        "columnDefinition", String.class,
+        "insertable", Boolean.class,
+        "length", Integer.class,
+        "name", String.class,
+        "nullable", Boolean.class,
+        "precision", Integer.class,
+        "table", String.class,
+        "unique", Boolean.class,
+        "updatable", Boolean.class
+    );
 
     public AddEntityCommand() throws InterruptedException {
         importablesMap = HttpClientUtil.getConfigs(Constants.IMPORTABLES);
@@ -145,8 +159,7 @@ public class AddEntityCommand implements Callable<Integer> {
                         TAB_SIZE), prop, connectionInfo.getString(prop)));
                 }
             });
-            var last = StringUtils.substringBeforeLast(lines.get(lines.size() - 1), Constants.COMMA);
-            lines.set(lines.size() - 1, last);
+            removeLastComma(lines);
 
             lines.add(")");
             var className = "DataSourceProvider";
@@ -161,7 +174,6 @@ public class AddEntityCommand implements Callable<Integer> {
         }
 
     }
-    private final List<String> props = List.of("url", "password", "user");
 
     private void createEntityClass(JsonObject projectInfo,
                                    String className,
@@ -189,7 +201,7 @@ public class AddEntityCommand implements Callable<Integer> {
                     lines.add("%s@Id".formatted(StringUtils.repeat(SPACE,
                         TAB_SIZE)));
                 }
-                
+                checkColumnDefinition(lines, definitionValue);
                 lines.add("%sprivate %s %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE), type,
                     fieldName));
                 lines.add(EMPTY);
@@ -209,5 +221,46 @@ public class AddEntityCommand implements Callable<Integer> {
             .addDependency(dependency, INFRASTRUCTURE, ADAPTERS));
     }
 
-    
+    private void checkColumnDefinition(List<String> lines,
+                                       JsonObject definitionValue) {
+        var propColumns = definitionValue.keySet()
+            .stream()
+            .filter(key -> columnProps.containsKey(key)).
+            toList();
+        if (propColumns.isEmpty()) {
+            return;
+        }
+        if (!lines.contains(IMPORT_COLUMN)) {
+            lines.add(2, IMPORT_COLUMN);
+        }
+        lines.add("%s@Column(".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
+        propColumns.forEach(property -> {
+            var propertyValue = getPropertyValue(definitionValue, property);
+            if (propertyValue != null) {
+                lines.add("%s%s = %s,".formatted(StringUtils.repeat(SPACE, TAB_SIZE * 2), property,
+                    propertyValue));
+            }
+        });
+
+        removeLastComma(lines);
+
+        lines.add("%s)".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
+    }
+
+    private String getPropertyValue(JsonObject definitionValue,
+                                    String property) {
+        var valueType = columnProps.get(property);
+        if (valueType == String.class) {
+            return "\"%s\"".formatted(definitionValue.getString(property));
+        }
+        if (valueType == Integer.class) {
+            return "%s".formatted(definitionValue.getInt(property));
+        }
+        if (valueType == Boolean.class) {
+            return "\"%s\"".formatted(definitionValue.getBoolean(property));
+        }
+
+        return null;
+    }
+
 }

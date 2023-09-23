@@ -15,10 +15,11 @@
                     "personId": {
                         "primaryKey": true,
                         "type": "String",
-                        "length": 10
+                        "length": 10,
+                        "name":"primary_key"
                     },
                     "firstName": {
-                        "type": "String"
+                        "type": "String" 
                     }
                 }
             }
