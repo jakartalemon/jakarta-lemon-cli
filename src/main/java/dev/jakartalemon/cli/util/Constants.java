@@ -31,6 +31,7 @@ public class Constants {
     public static final String FINDERS = "finders";
     public static final String ARTIFACT_ID = "artifactId";
     public static final String FIELDS = "fields";
+    public static final String TYPE = "type";
     public static final String INJECTS = "injects";
     public static final String COLON = ":";
     public static final String COMMA = ",";
@@ -43,6 +44,7 @@ public class Constants {
     public static final String PROJECT_VERSION = "${project.version}";
     public static final String MAVEN_COMPILER_RELEASE = "maven.compiler.release";
     public static final String ENTITIES = "entities";
+    public static final String ENTITY = "entity";
     public static final String POM = "pom";
     public static final String JAR = "jar";
     public static final String ADAPTERS = "adapters";
@@ -51,15 +53,17 @@ public class Constants {
     public static final String TEMPLATE_2_STRING_COMMA = "%s %s;";
     public static final String MODEL = "model";
     public static final String MAPPER = "mapper";
+    public static final String PRIMARY_KEY = "primaryKey";
     public static final String JAVA_VERSION = "17";
     public static final String ORG_MAPSTRUCT = "org.mapstruct";
     public static final String SRC = "src";
+    public static final String LENGTH = "length";
     public static final String MAIN = "main";
     public static final String TEST = "test";
     public static final String JAVA = "java";
     public static final String PACKAGE_TEMPLATE = "%s.%s.%s";
-    public static final String JAKARTA_ENTERPRISE="jakarta.enterprise";
-    public static final String JAKARTA_ANOTATION="jakarta.annotation";
+    public static final String JAKARTA_ENTERPRISE = "jakarta.enterprise";
+    public static final String JAKARTA_ANOTATION = "jakarta.annotation";
     public static final String JAKARTA_CDI_API_VERSION_KEY = "jakarta.enterprise.cdi-api.version";
     public static final String JAKARTA_ANOTATION_API_VERSION_KEY = "jakarta.annotation-api.version";
     public static final String JAKARTA_ANOTATION_API = "jakarta.annotation-api";
@@ -98,12 +102,13 @@ public class Constants {
         SCOPE, "provided"
     );
     public static final String DOCS = "docs";
-    public final static String DEPENDENCY_GROUP_ID = "groupId";
-    public final static String DEPENDENCY_ARTIFACT_ID = "artifactId";
-    public final static String DEPENDENCY_VERSION = "version";
+    public static final  String DEPENDENCY_GROUP_ID = "groupId";
+    public static final  String DEPENDENCY_ARTIFACT_ID = "artifactId";
+    public static final  String DEPENDENCY_VERSION = "version";
     public static final String G_KEY = "g";
     public static final String A_KEY = "a";
     public static final String LATEST_VERSION = "latestVersion";
+    public static final String MAVEN_QUERY_PERSISTENCE_API = "q=g:jakarta.persistence+AND+a:jakarta.persistence-api";
 
     public static final String RESPONSE = "response";
     /**

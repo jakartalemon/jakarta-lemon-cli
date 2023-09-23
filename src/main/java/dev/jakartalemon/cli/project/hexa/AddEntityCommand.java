@@ -35,11 +35,19 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 
 import static dev.jakartalemon.cli.util.Constants.ADAPTERS;
+import static dev.jakartalemon.cli.util.Constants.ENTITIES;
+import static dev.jakartalemon.cli.util.Constants.ENTITY;
+import static dev.jakartalemon.cli.util.Constants.FIELDS;
 import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
+import static dev.jakartalemon.cli.util.Constants.LENGTH;
+import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_PERSISTENCE_API;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
+import static dev.jakartalemon.cli.util.Constants.PRIMARY_KEY;
 import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
 import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING_COMMA;
+import static dev.jakartalemon.cli.util.Constants.TYPE;
+import jakarta.json.JsonValue;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
 
@@ -74,9 +82,12 @@ public class AddEntityCommand implements Callable<Integer> {
         createDatabaseConfig();
         return JsonFileUtil.getFileJson(file.toPath())
             .map(structure -> JsonFileUtil.getProjectInfo().map(projectInfo -> {
-            structure.forEach(
+            structure.getJsonArray(ENTITIES).stream()
+                .map(JsonValue::asJsonObject)
+                .forEach(item -> item.forEach(
                 (key, classDef) -> createEntityClass(projectInfo, key,
-                    classDef.asJsonObject()));
+                    classDef.asJsonObject())));
+
             return 0;
         }).orElse(1)).orElse(2);
     }
@@ -89,6 +100,8 @@ public class AddEntityCommand implements Callable<Integer> {
                 var configDb = databasesConfigs.getJsonObject(storageType);
                 log.debug("storageType:{}", storageType);
                 log.debug("configDb:{}", configDb);
+
+                addJpaDependency();
 
                 DependenciesUtil.getLastVersionDependency(configDb.getString(
                     "search")).ifPresent(dependency -> PomUtil.getInstance()
@@ -136,11 +149,11 @@ public class AddEntityCommand implements Callable<Integer> {
             lines.set(lines.size() - 1, last);
 
             lines.add(")");
-            var fileClassName = "DataSourceProvider";
-            lines.add("public class %s {".formatted(fileClassName));
+            var className = "DataSourceProvider";
+            lines.add("public class %s {".formatted(className));
 
             lines.add("}");
-            FileClassUtil.writeClassFile(projectInfo, packageName, fileClassName,
+            FileClassUtil.writeClassFile(projectInfo, packageName, className,
                 lines, INFRASTRUCTURE, ADAPTERS);
 
         } catch (IOException ex) {
@@ -151,8 +164,50 @@ public class AddEntityCommand implements Callable<Integer> {
     private final List<String> props = List.of("url", "password", "user");
 
     private void createEntityClass(JsonObject projectInfo,
-                                   String key,
+                                   String className,
                                    JsonObject jsonObject) {
+        try {
+            log.debug("classDefinition:{}", jsonObject);
+            List<String> lines = new ArrayList<>();
+            var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), INFRASTRUCTURE,
+                ADAPTERS) + "." + ENTITY;
+            lines.add(TEMPLATE_2_STRING_COMMA.formatted(PACKAGE, packageName));
+            lines.add(EMPTY);
+            lines.add("import jakarta.persistence.Entity;");
+            lines.add("import jakarta.persistence.Id;");
+            lines.add("import lombok.Getter;");
+            lines.add("import lombok.Setter;");
+            lines.add(EMPTY);
+            lines.add("@Entity");
+            lines.add("@Getter");
+            lines.add("@Setter");
+            lines.add("public class %s {".formatted(className));
+            jsonObject.getJsonObject(FIELDS).forEach((fieldName, definition) -> {
+                var definitionValue = definition.asJsonObject();
+                var type = definitionValue.getString(TYPE, "String");
+                if (definitionValue.getBoolean(PRIMARY_KEY, false)) {
+                    lines.add("%s@Id".formatted(StringUtils.repeat(SPACE,
+                        TAB_SIZE)));
+                }
+                
+                lines.add("%sprivate %s %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE), type,
+                    fieldName));
+                lines.add(EMPTY);
+            });
+            lines.add("}");
+            FileClassUtil.writeClassFile(projectInfo, packageName, className,
+                lines, INFRASTRUCTURE, ADAPTERS);
 
+        } catch (IOException ex) {
+            log.error(ex.getMessage(), ex);
+        }
     }
+
+    private void addJpaDependency() throws InterruptedException, IOException, URISyntaxException {
+        DependenciesUtil.getLastVersionDependency(
+            MAVEN_QUERY_PERSISTENCE_API).ifPresent(dependency -> PomUtil.getInstance()
+            .addDependency(dependency, INFRASTRUCTURE, ADAPTERS));
+    }
+
+    
 }
