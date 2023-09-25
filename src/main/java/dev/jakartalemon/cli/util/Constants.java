@@ -57,7 +57,6 @@ public class Constants {
     public static final String JAVA_VERSION = "17";
     public static final String ORG_MAPSTRUCT = "org.mapstruct";
     public static final String SRC = "src";
-    public static final String LENGTH = "length";
     public static final String MAIN = "main";
     public static final String TEST = "test";
     public static final String JAVA = "java";
@@ -102,13 +101,16 @@ public class Constants {
         SCOPE, "provided"
     );
     public static final String DOCS = "docs";
-    public static final  String DEPENDENCY_GROUP_ID = "groupId";
-    public static final  String DEPENDENCY_ARTIFACT_ID = "artifactId";
-    public static final  String DEPENDENCY_VERSION = "version";
+    public static final String DEPENDENCY_GROUP_ID = "groupId";
+    public static final String DEPENDENCY_ARTIFACT_ID = "artifactId";
+    public static final String DEPENDENCY_VERSION = "version";
     public static final String G_KEY = "g";
     public static final String A_KEY = "a";
     public static final String LATEST_VERSION = "latestVersion";
-    public static final String MAVEN_QUERY_PERSISTENCE_API = "q=g:jakarta.persistence+AND+a:jakarta.persistence-api";
+
+    public static final String DEFINE_FIELD_PATTERN = "%s%s %s;";
+    public static final String MAVEN_QUERY_PERSISTENCE_API
+        = "q=g:jakarta.persistence+AND+a:jakarta.persistence-api";
 
     public static final String RESPONSE = "response";
     /**

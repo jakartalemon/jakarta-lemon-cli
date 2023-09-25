@@ -15,7 +15,9 @@
  */
 package dev.jakartalemon.cli.project.hexa;
 
-import dev.jakartalemon.cli.model.BuildModel;
+import dev.jakartalemon.cli.project.hexa.handler.ApplicationModuleHandler;
+import dev.jakartalemon.cli.project.hexa.handler.DomainModuleHandler;
+import dev.jakartalemon.cli.project.hexa.handler.InfrastructureModuleHandler;
 import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.Json;
@@ -28,7 +30,17 @@ import java.util.Map;
 import java.util.Optional;
 
 import static dev.jakartalemon.cli.project.constants.Archetype.HEXA;
-import static dev.jakartalemon.cli.util.Constants.*;
+import static dev.jakartalemon.cli.util.Constants.APPLICATION;
+import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
+import static dev.jakartalemon.cli.util.Constants.DOMAIN;
+import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
+import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANOTATION_API_VERSION_KEY;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_CDI_API_VERSION_KEY;
+import static dev.jakartalemon.cli.util.Constants.JAVA_VERSION;
+import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_RELEASE;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE;
+import static dev.jakartalemon.cli.util.Constants.POM;
 
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
@@ -49,9 +61,9 @@ public class CreateHexagonalProject {
     }
 
     public Optional<JsonObject> createProject(Path projectPath,
-        String groupId,
-        String artifactId,
-        String packageName) {
+                                              String groupId,
+                                              String artifactId,
+                                              String packageName) {
         var version = "1.0-SNAPSHOT";
         var projectPom = PomModel.builder().groupId(groupId).artifactId(artifactId).version(version)
             .packaging(POM)
@@ -67,11 +79,15 @@ public class CreateHexagonalProject {
             ));
         PomUtil.getInstance().createPom(projectPath, projectPom.build());
 
-        var domainPath = createDomainModule(projectPath, groupId, artifactId, version, packageName);
-        var appPath
-            = createApplicationModule(projectPath, groupId, artifactId, version, packageName);
-        var infraPath = createInfrastructureModule(projectPath, groupId, artifactId, version,
-            packageName);
+        var domainPath = DomainModuleHandler.getInstance().createDomainModule(projectPath, groupId,
+            artifactId, version, packageName);
+        var appPath = ApplicationModuleHandler.getInstance().createApplicationModule(projectPath,
+            groupId, artifactId, version, packageName);
+
+        var infraPath = InfrastructureModuleHandler.getInstance().
+            createInfrastructureModule(projectPath,
+                groupId, artifactId, version,
+                packageName);
         var projectInfo = Json.createObjectBuilder()
             .add("archetype", HEXA.name())
             .add(GROUP_ID, groupId)
@@ -85,311 +101,6 @@ public class CreateHexagonalProject {
             infra -> projectInfo.add(INFRASTRUCTURE,
                 infra.getParent().toAbsolutePath().toString()));
         return Optional.of(projectInfo.build());
-    }
-
-    private Optional<Path> createDomainModule(Path projectPath,
-        String groupId,
-        String artifactId,
-        String version,
-        String packageName) {
-
-        var modulePom = PomModel.builder().parent(Map.of(
-            GROUP_ID, groupId,
-            ARTIFACT_ID, artifactId,
-            VERSION, version
-        )).packaging(JAR).dependencies(List.of(
-            LOMBOK_DEPENDENCY, MOCKITO_DEPENDENCY
-        )).properties(Map.of(
-            MAVEN_COMPILER_RELEASE, JAVA_VERSION
-        )).artifactId(DOMAIN);
-
-        var pomPath = PomUtil.getInstance().createPom(
-            projectPath.resolve(DOMAIN), modulePom.build()
-        );
-        pomPath.ifPresent(pom -> {
-            log.debug("domain created at {}", pom);
-            var parent = pom.getParent();
-            PomUtil.getInstance().createJavaProjectStructure(parent, PACKAGE_TEMPLATE.formatted(
-                packageName, DOMAIN, REPOSITORY));
-            PomUtil.getInstance()
-                .createJavaProjectStructure(parent,
-                    PACKAGE_TEMPLATE.formatted(packageName, DOMAIN, MODEL));
-            PomUtil.getInstance().
-                createJavaProjectStructure(parent,
-                    PACKAGE_TEMPLATE.formatted(packageName, DOMAIN, USECASE));
-        });
-        return pomPath;
-    }
-
-    private Optional<Path> createApplicationModule(Path projectPath,
-        String groupId,
-        String artifactId,
-        String version,
-        String packageName) {
-        var modulePom = PomModel.builder()
-            .parent(Map.of(
-                GROUP_ID, groupId,
-                ARTIFACT_ID, artifactId,
-                VERSION, version)
-            ).artifactId(APPLICATION)
-            .packaging(POM)
-            .modules(List.of(REPOSITORY, USECASE));
-        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve(APPLICATION),
-            modulePom.build());
-        pomPath.ifPresent(pom -> {
-            log.debug("application created at {}", pom.toAbsolutePath());
-            createApplicationRepositoryModule(pom.getParent(), groupId, version,
-                packageName);
-            createApplicationServiceModule(pom.getParent(), groupId, version,
-                packageName);
-        });
-        return pomPath;
-    }
-
-    private void createApplicationRepositoryModule(Path projectPath,
-        String groupId,
-        String version,
-        String packageName) {
-        var modulePom = PomModel.builder()
-            .parent(Map.of(GROUP_ID, groupId,
-                ARTIFACT_ID, APPLICATION,
-                VERSION, version
-            ))
-            .artifactId(REPOSITORY)
-            .packaging(JAR)
-            .dependencies(List.of(
-                Map.of(
-                    GROUP_ID, PROJECT_GROUP_ID,
-                    ARTIFACT_ID, DOMAIN,
-                    VERSION, PROJECT_VERSION
-                )
-            ))
-            .properties(
-                Map.of(MAVEN_COMPILER_RELEASE, JAVA_VERSION)
-            );
-        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve(REPOSITORY),
-            modulePom.build());
-
-        pomPath.ifPresent(pom -> {
-            log.debug("repository created at {}", pom.toAbsolutePath());
-            PomUtil.getInstance().createJavaProjectStructure(pom.getParent(), packageName);
-        });
-    }
-
-    private void createApplicationServiceModule(Path projectPath,
-        String groupId,
-        String version,
-        String packageName) {
-        var modulePom = PomModel.builder()
-            .parent(Map.of(GROUP_ID, groupId,
-                ARTIFACT_ID, APPLICATION,
-                VERSION, version
-            ))
-            .artifactId(USECASE)
-            .packaging(JAR)
-            .dependencies(List.of(
-                Map.of(
-                    GROUP_ID, PROJECT_GROUP_ID,
-                    ARTIFACT_ID, DOMAIN,
-                    VERSION, PROJECT_VERSION
-                ),
-                Map.of(
-                    GROUP_ID, PROJECT_GROUP_ID,
-                    ARTIFACT_ID, REPOSITORY,
-                    VERSION, PROJECT_VERSION
-                ),
-                JAKARTA_INJECT_DEPENDENCY
-            ))
-            .properties(
-                Map.of(MAVEN_COMPILER_RELEASE, JAVA_VERSION)
-            );
-        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve(USECASE),
-            modulePom.build());
-
-        pomPath.ifPresent(pom -> {
-            log.debug("repository created at {}", pom.toAbsolutePath());
-            PomUtil.getInstance().createJavaProjectStructure(pom.getParent(), packageName);
-        });
-    }
-
-    private Optional<Path> createInfrastructureModule(Path projectPath,
-        String groupId,
-        String artifactId,
-        String version,
-        String packageName) {
-        var modulePom = PomModel.builder()
-            .parent(Map.of(GROUP_ID, groupId,
-                ARTIFACT_ID, artifactId,
-                VERSION, version
-            ))
-            .artifactId(INFRASTRUCTURE)
-            .packaging(POM)
-            .modules(
-                List.of(
-                    ENTITIES, MAPPER, ADAPTERS
-                )
-            );
-        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve(INFRASTRUCTURE),
-            modulePom.build());
-
-        pomPath.ifPresent(pom -> {
-            log.debug("infrastructure created at {}", pom.toAbsolutePath());
-            createEntityInfrastructureModule(pom.getParent(), groupId, version,
-                packageName);
-            createMapperInfrastructureModule(pom.getParent(), groupId, version,
-                packageName);
-            createAdaptersInfrastructureModule(pom.getParent(), groupId, version,
-                packageName);
-        });
-        return pomPath;
-    }
-
-    private void createEntityInfrastructureModule(Path projectPath,
-        String groupId,
-        String version,
-        String packageName) {
-        var modulePom = PomModel.builder()
-            .parent(Map.of(GROUP_ID, groupId,
-                ARTIFACT_ID, INFRASTRUCTURE,
-                VERSION, version
-            ))
-            .artifactId(ENTITIES)
-            .packaging(JAR)
-            .dependencies(
-                List.of(
-                    Map.of(
-                        GROUP_ID, "org.projectlombok",
-                        ARTIFACT_ID, "lombok",
-                        VERSION, "${org.projectlombok.version}"
-                    )
-                )
-            ).properties(
-                Map.of(MAVEN_COMPILER_RELEASE, JAVA_VERSION)
-            );
-        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve(ENTITIES),
-            modulePom.build());
-        pomPath.ifPresent(pom -> {
-            log.debug("entities created at {}", pom.toAbsolutePath());
-            PomUtil.getInstance()
-                .createJavaProjectStructure(pom.getParent(), PACKAGE_TEMPLATE.formatted(
-                    packageName, INFRASTRUCTURE, ENTITIES));
-        });
-    }
-
-    private void createMapperInfrastructureModule(Path projectPath,
-        String groupId,
-        String version,
-        String packageName) {
-        var modulePom = PomModel.builder()
-            .parent(Map.of(GROUP_ID, groupId,
-                ARTIFACT_ID, INFRASTRUCTURE,
-                VERSION, version
-            ))
-            .artifactId(MAPPER)
-            .packaging(JAR)
-            .dependencies(
-                List.of(
-                    Map.of(
-                        GROUP_ID, ORG_MAPSTRUCT,
-                        ARTIFACT_ID, "mapstruct",
-                        VERSION, "${org.mapstruct.version}"
-                    ),
-                    Map.of(
-                        GROUP_ID, PROJECT_GROUP_ID,
-                        ARTIFACT_ID, DOMAIN,
-                        VERSION, PROJECT_VERSION
-                    ),
-                    Map.of(
-                        GROUP_ID, PROJECT_GROUP_ID,
-                        ARTIFACT_ID, ENTITIES,
-                        VERSION, PROJECT_VERSION
-                    ),
-                    MOCKITO_DEPENDENCY
-                )
-            ).properties(
-                Map.of(MAVEN_COMPILER_RELEASE, JAVA_VERSION)
-            ).buildModel(
-                BuildModel.builder()
-                    .plugins(Json.createArrayBuilder()
-                        .add(
-                            Json.createObjectBuilder()
-                                .add(GROUP_ID, "org.apache.maven.plugins")
-                                .add(ARTIFACT_ID, "maven-compiler-plugin")
-                                .add(VERSION, "3.11.0")
-                                .add("configuration", Json.createObjectBuilder()
-                                    .add("annotationProcessorPaths", Json.createObjectBuilder()
-                                        .add("path", Json.createObjectBuilder()
-                                            .add(GROUP_ID, ORG_MAPSTRUCT)
-                                            .add(ARTIFACT_ID, "mapstruct-processor")
-                                            .add(VERSION, "${org.mapstruct.version}")))
-                                )
-                        ).build()
-                    ).build()
-            );
-        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve(MAPPER),
-            modulePom.build());
-        pomPath.ifPresent(pom -> {
-            log.debug("mapper created at {}", pom.toAbsolutePath());
-            PomUtil.getInstance()
-                .createJavaProjectStructure(pom.getParent(), "%s.%s.mapper".formatted(
-                    packageName, INFRASTRUCTURE));
-        });
-    }
-
-    private void createAdaptersInfrastructureModule(Path projectPath,
-        String groupId,
-        String version,
-        String packageName) {
-        var modulePom = PomModel.builder()
-            .parent(Map.of(GROUP_ID, groupId,
-                ARTIFACT_ID, INFRASTRUCTURE,
-                VERSION, version
-            ))
-            .artifactId(ADAPTERS)
-            .packaging(JAR)
-            .dependencies(
-                List.of(
-                    LOMBOK_DEPENDENCY,
-                    Map.of(
-                        GROUP_ID, PROJECT_GROUP_ID,
-                        ARTIFACT_ID, DOMAIN,
-                        VERSION, PROJECT_VERSION
-                    ),
-                    Map.of(
-                        GROUP_ID, PROJECT_GROUP_ID,
-                        ARTIFACT_ID, USECASE,
-                        VERSION, PROJECT_VERSION
-                    ),
-                    Map.of(
-                        GROUP_ID, PROJECT_GROUP_ID,
-                        ARTIFACT_ID, ENTITIES,
-                        VERSION, PROJECT_VERSION
-                    ),
-                    Map.of(
-                        GROUP_ID, PROJECT_GROUP_ID,
-                        ARTIFACT_ID, MAPPER,
-                        VERSION, PROJECT_VERSION
-                    ), Map.of(
-                        GROUP_ID, JAKARTA_ENTERPRISE,
-                        ARTIFACT_ID, JAKARTA_CDI_API,
-                        VERSION, "${%s}".formatted(JAKARTA_CDI_API_VERSION_KEY)
-                    ), Map.of(
-                        GROUP_ID, JAKARTA_ANOTATION,
-                        ARTIFACT_ID, JAKARTA_ANOTATION_API,
-                        VERSION, "${%s}".formatted(JAKARTA_ANOTATION_API_VERSION_KEY)
-                    )
-                )
-            ).properties(
-                Map.of(MAVEN_COMPILER_RELEASE, JAVA_VERSION)
-            );
-        var pomPath = PomUtil.getInstance().createPom(projectPath.resolve(ADAPTERS),
-            modulePom.build());
-        pomPath.ifPresent(pom -> {
-            log.debug("adapters created at {}", pom.toAbsolutePath());
-            PomUtil.getInstance()
-                .createJavaProjectStructure(pom.getParent(), PACKAGE_TEMPLATE.formatted(
-                    packageName, INFRASTRUCTURE, ADAPTERS));
-        });
     }
 
 }
