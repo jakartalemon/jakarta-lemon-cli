@@ -84,13 +84,13 @@ public class HttpClientUtil {
         }
     }
 
-    public static Map<String, String> getConfigs(String configName) throws InterruptedException {
+    public static Map<String, String> getConfigs(String configName){
         if (cliConfig == null) {
             try {
                 cliConfig =
                     HttpClientUtil.getJson(JAKARTA_LEMON_CONFIG_URL, JsonReader::readObject);
 
-            } catch (IOException | URISyntaxException ex) {
+            } catch (IOException | URISyntaxException | InterruptedException ex) {
                 log.error(ex.getMessage(), ex);
 
             }
@@ -104,13 +104,13 @@ public class HttpClientUtil {
         return importablesMap;
     }
 
-    public static Optional<JsonObject> getDatabasesConfigs() throws InterruptedException {
+    public static Optional<JsonObject> getDatabasesConfigs()  {
         if (cliConfig == null) {
             try {
                 cliConfig =
                     HttpClientUtil.getJson(JAKARTA_LEMON_CONFIG_URL, JsonReader::readObject);
 
-            } catch (IOException | URISyntaxException ex) {
+            } catch (IOException | URISyntaxException |InterruptedException ex) {
                 log.error(ex.getMessage(), ex);
 
             }

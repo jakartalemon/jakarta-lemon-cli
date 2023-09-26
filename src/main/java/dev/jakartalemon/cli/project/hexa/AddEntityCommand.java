@@ -15,33 +15,16 @@
  */
 package dev.jakartalemon.cli.project.hexa;
 
-import dev.jakartalemon.cli.util.Constants;
-import dev.jakartalemon.cli.util.DependenciesUtil;
-import dev.jakartalemon.cli.util.FileClassUtil;
-import dev.jakartalemon.cli.util.HttpClientUtil;
+import dev.jakartalemon.cli.project.hexa.handler.InfrastructureModuleHandler;
 import dev.jakartalemon.cli.util.JsonFileUtil;
-import dev.jakartalemon.cli.util.PomUtil;
-import jakarta.json.JsonObject;
+import jakarta.json.JsonValue;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import picocli.CommandLine;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 
-import static dev.jakartalemon.cli.util.Constants.ADAPTERS;
-import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
-import static dev.jakartalemon.cli.util.Constants.PACKAGE;
-import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
-import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
-import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING_COMMA;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.SPACE;
+import static dev.jakartalemon.cli.util.Constants.ENTITIES;
 
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
@@ -55,104 +38,30 @@ import static org.apache.commons.lang3.StringUtils.SPACE;
 @Slf4j
 public class AddEntityCommand implements Callable<Integer> {
 
-    private final Map<String, String> importablesMap;
-    private final JsonObject databasesConfigs;
-
     @CommandLine.Parameters(
         paramLabel = "ENTITY_DEFINITION.json",
         descriptionKey = "entity_definition"
     )
     private File file;
 
-    public AddEntityCommand() throws InterruptedException {
-        importablesMap = HttpClientUtil.getConfigs(Constants.IMPORTABLES);
-        databasesConfigs = HttpClientUtil.getDatabasesConfigs().orElseThrow();
+    public AddEntityCommand() {
+
     }
 
     @Override
     public Integer call() throws Exception {
-        createDatabaseConfig();
+        var infrastructureModuleHandler = InfrastructureModuleHandler.getInstance();
+        infrastructureModuleHandler.createDatabaseConfig(file);
         return JsonFileUtil.getFileJson(file.toPath())
             .map(structure -> JsonFileUtil.getProjectInfo().map(projectInfo -> {
-            structure.forEach(
-                (key, classDef) -> createEntityClass(projectInfo, key,
-                    classDef.asJsonObject()));
+            structure.getJsonArray(ENTITIES).stream()
+                .map(JsonValue::asJsonObject)
+                .forEach(item -> item.forEach(
+                (key, classDef) -> infrastructureModuleHandler.createEntityClass(projectInfo, key,
+                    classDef.asJsonObject())));
+
             return 0;
         }).orElse(1)).orElse(2);
     }
 
-    private void createDatabaseConfig() {
-        JsonFileUtil.getFileJson(file.toPath())
-            .ifPresent(config -> JsonFileUtil.getProjectInfo().ifPresent(projectInfo -> {
-            try {
-                var storageType = config.getString("storageType");
-                var configDb = databasesConfigs.getJsonObject(storageType);
-                log.debug("storageType:{}", storageType);
-                log.debug("configDb:{}", configDb);
-
-                DependenciesUtil.getLastVersionDependency(configDb.getString(
-                    "search")).ifPresent(dependency -> PomUtil.getInstance()
-                    .addDependency(dependency, INFRASTRUCTURE,
-                        ADAPTERS));
-                var dataSourceClass = configDb.getString("datasource");
-                var connectionInfo = config.getJsonObject("connectionInfo");
-                var connectionType = config.getString("connectionType");
-                switch (connectionType) {
-                    case "DataSourceEmbedded" ->
-                        createDataSourceClass(projectInfo, dataSourceClass, connectionInfo);
-                }
-
-            } catch (InterruptedException | IOException | URISyntaxException e) {
-                log.error(e.getMessage(), e);
-
-            }
-        }));
-
-    }
-
-    private void createDataSourceClass(JsonObject projectInfo,
-                                       String dataSourceClass,
-                                       JsonObject connectionInfo) {
-        try {
-            List<String> lines = new ArrayList<>();
-            var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), INFRASTRUCTURE,
-                ADAPTERS);
-            lines.add(TEMPLATE_2_STRING_COMMA.formatted(PACKAGE, packageName));
-            lines.add(EMPTY);
-            lines.add("import jakarta.annotation.sql.DataSourceDefinition;");
-            lines.add(EMPTY);
-            lines.add("@DataSourceDefinition(");
-            lines.add("%sclassName = \"%s\",".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
-                dataSourceClass));
-            lines.add("%sname = \"java:global/App/Datasource\",".formatted(StringUtils.repeat(SPACE,
-                TAB_SIZE)));
-            props.forEach(prop -> {
-                if (connectionInfo.containsKey(prop)) {
-                    lines.add("%s%s = \"%s\",".formatted(StringUtils.repeat(SPACE,
-                        TAB_SIZE), prop, connectionInfo.getString(prop)));
-                }
-            });
-            var last = StringUtils.substringBeforeLast(lines.get(lines.size() - 1), Constants.COMMA);
-            lines.set(lines.size() - 1, last);
-
-            lines.add(")");
-            var fileClassName = "DataSourceProvider";
-            lines.add("public class %s {".formatted(fileClassName));
-
-            lines.add("}");
-            FileClassUtil.writeClassFile(projectInfo, packageName, fileClassName,
-                lines, INFRASTRUCTURE, ADAPTERS);
-
-        } catch (IOException ex) {
-            log.error(ex.getMessage(), ex);
-        }
-
-    }
-    private final List<String> props = List.of("url", "password", "user");
-
-    private void createEntityClass(JsonObject projectInfo,
-                                   String key,
-                                   JsonObject jsonObject) {
-
-    }
 }

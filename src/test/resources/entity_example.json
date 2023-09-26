@@ -1,29 +1,28 @@
 {
-  "storageType": "h2",
-  "connectionType": "DataSourceEmbedded",
-  "connectionInfo": {
-    "url": "jdbc:h2:mem:testdb",
-    "user": "sa",
-    "password": "",
-    "properties": {}
-  },
-  "entities": [
-    {
-      "Person": {
-        "mapToModel": "Person",
-        "fields": {
-          "personId": {
-            "dni": {
-              "primaryKey": true,
-              "type": "String",
-              "length": 10
+    "storageType": "h2",
+    "connectionType": "DataSourceEmbedded",
+    "connectionInfo": {
+        "url": "jdbc:h2:mem:testdb",
+        "user": "sa",
+        "password": "",
+        "properties": {}
+    },
+    "entities": [
+        {
+            "Person": {
+                "mapToModel": "Person",
+                "fields": {
+                    "personId": {
+                        "primaryKey": true,
+                        "type": "String",
+                        "length": 10,
+                        "name":"primary_key"
+                    },
+                    "firstName": {
+                        "type": "String" 
+                    }
+                }
             }
-          },
-          "firstName": {
-            "type": "String"
-          }
         }
-      }
-    }
-  ]
+    ]
 }

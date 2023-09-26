@@ -20,10 +20,8 @@ import jakarta.json.JsonObject;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static dev.jakartalemon.cli.util.Constants.JAVA;
 import static dev.jakartalemon.cli.util.Constants.MAIN;
@@ -39,7 +37,7 @@ public class FileClassUtil {
                                       String packageName,
                                       String className,
                                       List<String> lines,
-                                      String... module) throws IOException {
+                                      String module) throws IOException {
         writeClassFile(projectInfo, null, packageName, className, lines, module);
     }
 
@@ -48,18 +46,11 @@ public class FileClassUtil {
                                       String packageName,
                                       String className,
                                       List<String> lines,
-                                      String... module) throws IOException {
-        var rootModule = module[0];
-        var classPackage = Path.of(projectInfo.getString(rootModule));
-        AtomicReference<Path> atomicPath = new AtomicReference<>(classPackage);
-        Arrays.stream(module).sequential().skip(1).forEach(mod -> {
-            var path = atomicPath.get();
-            path = path.resolve(mod);
-            atomicPath.set(path);
-        });
-        classPackage
-            = atomicPath.get().resolve(SRC).resolve(Optional.ofNullable(target).orElse(MAIN))
-                .resolve(JAVA);
+                                      String module) throws IOException {
+
+        var classPackage = Path.of(projectInfo.getString(module)).resolve(SRC)
+            .resolve(Optional.ofNullable(target).orElse(MAIN))
+            .resolve(JAVA);
         var packageNameList = packageName.split("\\.");
         for (var item : packageNameList) {
             classPackage = classPackage.resolve(item);
