@@ -58,6 +58,7 @@ public class Constants {
     public static final String ORG_MAPSTRUCT = "org.mapstruct";
     public static final String SRC = "src";
     public static final String MAIN = "main";
+    public static final String NAME = "name";
     public static final String RESOURCES = "resources";
     public static final String TEST = "test";
     public static final String JAVA = "java";
@@ -116,6 +117,7 @@ public class Constants {
     public static final String A_KEY = "a";
     public static final String LATEST_VERSION = "latestVersion";
     public static final String MANY_TO_ONE = "manyToOne";
+    public static final String ONE_TO_ONE = "oneToOne";
 
     public static final String DEFINE_FIELD_PATTERN = "%s%s %s;";
     public static final String MAVEN_QUERY_PERSISTENCE_API

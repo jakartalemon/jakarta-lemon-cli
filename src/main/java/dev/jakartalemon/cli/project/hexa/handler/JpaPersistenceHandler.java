@@ -28,6 +28,8 @@ import static dev.jakartalemon.cli.util.Constants.JOIN_COLUMN_ANOTATION;
 import static dev.jakartalemon.cli.util.Constants.MAIN;
 import static dev.jakartalemon.cli.util.Constants.MANY_TO_ONE;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_PERSISTENCE_API;
+import static dev.jakartalemon.cli.util.Constants.NAME;
+import static dev.jakartalemon.cli.util.Constants.ONE_TO_ONE;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
 import static dev.jakartalemon.cli.util.Constants.PRIMARY_KEY;
@@ -74,8 +76,14 @@ public class JpaPersistenceHandler {
 
     private static final String IMPORT_COLUMN = "import jakarta.persistence.%s;";
     private static final String IMPORT_MANY_TO_ONE = "import jakarta.persistence.ManyToOne;";
+    private static final String IMPORT_ONE_TO_ONE = "import jakarta.persistence.OneToOne;";
     private static final String PERSISTENCE_FILE_NAME = "persistence.xml";
-    public final static String PERSISTENCE = "persistence";
+    private static final String PERSISTENCE = "persistence";
+    private static String[][] ASSOCIATIONS_DESCRIPTIONS = {
+        {MANY_TO_ONE, IMPORT_MANY_TO_ONE},
+        {ONE_TO_ONE, IMPORT_ONE_TO_ONE}
+    };
+
     public static JpaPersistenceHandler getInstance() {
         return JpaPersistenceHandlerHolder.INSTANCE;
     }
@@ -103,12 +111,17 @@ public class JpaPersistenceHandler {
 
     private boolean checkAssociation(List<String> lines,
                                      JsonObject definitionValue) {
-        if (definitionValue.containsKey(MANY_TO_ONE)) {
-            if (!lines.contains(IMPORT_MANY_TO_ONE)) {
-                lines.add(2, IMPORT_MANY_TO_ONE);
+        for (var descriptionsRow : ASSOCIATIONS_DESCRIPTIONS) {
+            var anotation = descriptionsRow[0];
+            if (definitionValue.containsKey(anotation)) {
+                var importDeclaration = descriptionsRow[1];
+                if (!lines.contains(importDeclaration)) {
+                    lines.add(2, importDeclaration);
+                }
+                lines.add("%s@%s".formatted(StringUtils.repeat(SPACE, TAB_SIZE), StringUtils.
+                    capitalize(anotation)));
+                return true;
             }
-            lines.add("%s@ManyToOne".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
-            return true;
         }
         return false;
 
@@ -206,7 +219,6 @@ public class JpaPersistenceHandler {
         lines.add("%s)".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
     }
 
-
     private void readAnnotationsDefinitions() throws IOException, InterruptedException,
                                                      URISyntaxException {
         JsonObject definitions = HttpClientUtil.getJson(JAKARTA_LEMON_CONFIG_URL,
@@ -256,7 +268,7 @@ public class JpaPersistenceHandler {
         try {
             DocumentXmlUtil.createElement(persistenceXml, "/persistence", "persistence-unit")
                 .ifPresent(persistenceUnitElement -> {
-                    persistenceUnitElement.setAttribute("name", "persistenceUnit");
+                    persistenceUnitElement.setAttribute(NAME, "persistenceUnit");
                     DocumentXmlUtil.createElement(persistenceXml, persistenceUnitElement,
                         "jta-data-source", dataSourceName);
                 });

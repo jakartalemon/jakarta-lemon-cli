@@ -9,6 +9,15 @@
     },
     "entities": [
         {
+            "Address": {
+                "fields": {
+                    "addressId": {
+                        "primaryKey": true,
+                        "type": "String",
+                        "length": 10
+                    } 
+                }  
+            },
             "Person": {
                 "mapToModel": "Person",
                 "fields": {
@@ -20,6 +29,11 @@
                     },
                     "firstName": {
                         "type": "String" 
+                    },
+                    "address": {
+                        "type": "Address",
+                        "oneToOne": true,
+                        "name": "address_id"  
                     }
                 }
             },
