@@ -58,6 +58,8 @@ public class Constants {
     public static final String ORG_MAPSTRUCT = "org.mapstruct";
     public static final String SRC = "src";
     public static final String MAIN = "main";
+    public static final String NAME = "name";
+    public static final String RESOURCES = "resources";
     public static final String TEST = "test";
     public static final String JAVA = "java";
     public static final String PACKAGE_TEMPLATE = "%s.%s.%s";
@@ -72,6 +74,13 @@ public class Constants {
     public static final String IMPORT_PACKAGE_TEMPLATE = "import %s;";
     public static final int TAB_SIZE = 4;
     public static final String SCOPE = "scope";
+    public static final String STRING_TYPE = "String";
+    public static final String INTEGER_TYPE = "Integer";
+    public static final String BOOLEAN_TYPE = "Boolean";
+    public static final String COLUMN_ANOTATION = "Column";
+    public static final String JOIN_COLUMN_ANOTATION = "JoinColumn";
+    public static final String ANNOTATION_PROPS = "annotations-props";
+    public static final char SLASH = '/';
     public static final String JAKARTA_LEMON_HOST_BASE = "https://jakartalemon.dev";
     public static final String JAKARTA_LEMON_CONFIG_URL
         = JAKARTA_LEMON_HOST_BASE + "/lemon-cli-config.json";
@@ -107,6 +116,8 @@ public class Constants {
     public static final String G_KEY = "g";
     public static final String A_KEY = "a";
     public static final String LATEST_VERSION = "latestVersion";
+    public static final String MANY_TO_ONE = "manyToOne";
+    public static final String ONE_TO_ONE = "oneToOne";
 
     public static final String DEFINE_FIELD_PATTERN = "%s%s %s;";
     public static final String MAVEN_QUERY_PERSISTENCE_API
@@ -120,6 +131,10 @@ public class Constants {
      */
 
     public static final String QUERY_MAVEN_URL = "https://search.maven.org/solrsearch/select?";
+
+    public final static String XMLNS = "xmlns";
+    public final static String XMLNS_XSI = "xmlns:xsi";
+    public final static String XMLNS_XSI_INSTANCE = "http://www.w3.org/2001/XMLSchema-instance";
 
     private Constants() {
     }

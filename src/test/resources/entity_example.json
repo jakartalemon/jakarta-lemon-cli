@@ -9,6 +9,15 @@
     },
     "entities": [
         {
+            "Address": {
+                "fields": {
+                    "addressId": {
+                        "primaryKey": true,
+                        "type": "String",
+                        "length": 10
+                    } 
+                }  
+            },
             "Person": {
                 "mapToModel": "Person",
                 "fields": {
@@ -16,10 +25,50 @@
                         "primaryKey": true,
                         "type": "String",
                         "length": 10,
-                        "name":"primary_key"
+                        "name": "primary_key"
                     },
                     "firstName": {
                         "type": "String" 
+                    },
+                    "address": {
+                        "type": "Address",
+                        "oneToOne": true,
+                        "name": "address_id"  
+                    }
+                }
+            },
+            "Bank": {
+                "fields": {
+                    "bankId": {
+                        "primaryKey": true,
+                        "type": "String",
+                        "length": 30,
+                        "name": "bank_id",
+                        "strategyId": "UUID"
+                    },
+                    "name": {
+                        "type": "String",
+                        "length": 100
+                    }
+                }
+            },
+            "LocalBank": {
+                "fields": {
+                    "localBankId": {
+                        "primaryKey": true,
+                        "type": "String",
+                        "length": 30,
+                        "name": "local_bank_id",
+                        "strategyId": "UUID"
+                    },
+                    "name": {
+                        "type": "String",
+                        "length": 100
+                    },
+                    "bank": {
+                        "type": "Bank",
+                        "manyToOne": true,
+                        "name": "bank_id"
                     }
                 }
             }

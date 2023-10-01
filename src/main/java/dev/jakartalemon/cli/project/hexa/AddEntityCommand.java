@@ -16,6 +16,7 @@
 package dev.jakartalemon.cli.project.hexa;
 
 import dev.jakartalemon.cli.project.hexa.handler.InfrastructureModuleHandler;
+import dev.jakartalemon.cli.project.hexa.handler.JpaPersistenceHandler;
 import dev.jakartalemon.cli.util.JsonFileUtil;
 import jakarta.json.JsonValue;
 import lombok.extern.slf4j.Slf4j;
@@ -52,14 +53,16 @@ public class AddEntityCommand implements Callable<Integer> {
     public Integer call() throws Exception {
         var infrastructureModuleHandler = InfrastructureModuleHandler.getInstance();
         infrastructureModuleHandler.createDatabaseConfig(file);
+        var jpaPersistenceHandler = JpaPersistenceHandler.getInstance();
         return JsonFileUtil.getFileJson(file.toPath())
             .map(structure -> JsonFileUtil.getProjectInfo().map(projectInfo -> {
             structure.getJsonArray(ENTITIES).stream()
                 .map(JsonValue::asJsonObject)
                 .forEach(item -> item.forEach(
-                (key, classDef) -> infrastructureModuleHandler.createEntityClass(projectInfo, key,
+                (key, classDef) -> jpaPersistenceHandler.createEntityClass(projectInfo, key,
                     classDef.asJsonObject())));
-
+                jpaPersistenceHandler.createPersistenceUnit(infrastructureModuleHandler.getDataSourceName());
+            jpaPersistenceHandler.savePersistenceXml();
             return 0;
         }).orElse(1)).orElse(2);
     }
