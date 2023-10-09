@@ -47,8 +47,16 @@ public class FileClassUtil {
                                       String className,
                                       List<String> lines,
                                       String module) throws IOException {
+        writeClassFile(projectInfo.getString(module), target, packageName, className, lines);
+    }
 
-        var classPackage = Path.of(projectInfo.getString(module)).resolve(SRC)
+    public static void writeClassFile(String modulePath,
+                                      String target,
+                                      String packageName,
+                                      String className,
+                                      List<String> lines) throws IOException {
+
+        var classPackage = Path.of(modulePath).resolve(SRC)
             .resolve(Optional.ofNullable(target).orElse(MAIN))
             .resolve(JAVA);
         var packageNameList = packageName.split("\\.");

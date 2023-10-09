@@ -35,6 +35,7 @@ public class Constants {
     public static final String INJECTS = "injects";
     public static final String COLON = ":";
     public static final String COMMA = ",";
+    public static final String COMMA_SPACE = ", ";
     public static final String VERSION = "version";
     public static final String APPLICATION = "application";
     public static final String DOMAIN = "domain";
@@ -132,9 +133,12 @@ public class Constants {
 
     public static final String QUERY_MAVEN_URL = "https://search.maven.org/solrsearch/select?";
 
-    public final static String XMLNS = "xmlns";
-    public final static String XMLNS_XSI = "xmlns:xsi";
-    public final static String XMLNS_XSI_INSTANCE = "http://www.w3.org/2001/XMLSchema-instance";
+    public static final String XMLNS = "xmlns";
+    public static final String XMLNS_XSI = "xmlns:xsi";
+    public static final String XMLNS_XSI_INSTANCE = "http://www.w3.org/2001/XMLSchema-instance";
+
+    public static final String PRIVATE_FINAL_VARIABLE_TEMPLATE = "%sprivate final %s;";
+    public static final String PRIVATE_VARIABLE_TEMPLATE = "%sprivate %s;";
 
     private Constants() {
     }
