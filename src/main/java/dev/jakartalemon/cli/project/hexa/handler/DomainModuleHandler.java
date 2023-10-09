@@ -18,7 +18,6 @@ package dev.jakartalemon.cli.project.hexa.handler;
 import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.project.hexa.AddModelCommand;
 import dev.jakartalemon.cli.util.Constants;
-import dev.jakartalemon.cli.util.FileClassUtil;
 import dev.jakartalemon.cli.util.HttpClientUtil;
 import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.JsonObject;
@@ -227,63 +226,58 @@ public class DomainModuleHandler {
                             JsonObject classDef,
                             Path repositoryPath) {
 
-        log.info("Creating {} class", className);
-        List<String> lines = new ArrayList<>();
-        var packageName
-            = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, MODEL);
-        lines.add("package %s;".formatted(packageName));
-        lines.add(EMPTY);
-        lines.add("import lombok.Getter;");
-        lines.add("import lombok.Setter;");
-        lines.add("import lombok.Builder;");
-        lines.add("import lombok.AllArgsConstructor;");
-        lines.add("import lombok.NoArgsConstructor;");
-        lines.add(EMPTY);
-        lines.add("@Setter");
-        lines.add("@Getter");
-        lines.add("@Builder");
-        lines.add("@AllArgsConstructor");
-        lines.add("@NoArgsConstructor");
-        lines.add("public class %s {".formatted(className));
-        AtomicReference<String> primaryKeyTypeRef = new AtomicReference<>();
+        try {
+            log.info("Creating {} class", className);
+            var javaFileBuilder = new JavaFileBuilder();
+            javaFileBuilder.setPackage(projectInfo.getString(PACKAGE), DOMAIN, MODEL)
+                .addImportClass("lombok.Getter")
+                .addImportClass("lombok.Setter")
+                .addImportClass("lombok.Builder")
+                .addImportClass("lombok.AllArgsConstructor")
+                .addImportClass("lombok.NoArgsConstructor")
+                .addClassAnnotation("Setter")
+                .addClassAnnotation("Getter")
+                .addClassAnnotation("Builder")
+                .addClassAnnotation("AllArgsConstructor")
+                .addClassAnnotation("NoArgsConstructor")
+                .setClassName(className);
+            AtomicReference<String> primaryKeyTypeRef = new AtomicReference<>();
 
-        var fieldsDef = classDef.getJsonObject(FIELDS);
-        //creating fields
-        fieldsDef.keySet().forEach(field -> {
-            var classTypeValue = fieldsDef.get(field);
-            String classType = EMPTY;
-            if (classTypeValue.getValueType() == JsonValue.ValueType.STRING) {
-                classType = fieldsDef.getString(field);
+            var fieldsDef = classDef.getJsonObject(FIELDS);
+            //creating fields
+            fieldsDef.keySet().forEach(field -> {
+                var classTypeValue = fieldsDef.get(field);
+                String classType = EMPTY;
+                if (classTypeValue.getValueType() == JsonValue.ValueType.STRING) {
+                    classType = fieldsDef.getString(field);
 
-            } else if (classTypeValue.getValueType() == JsonValue.ValueType.OBJECT) {
-                var classObjectDef = classTypeValue.asJsonObject();
-                var primaryKey = classObjectDef.getBoolean("primaryKey", false);
-                classType = classObjectDef.getString("type");
-                if (primaryKey) {
-                    primaryKeyTypeRef.set(classType);
+                } else if (classTypeValue.getValueType() == JsonValue.ValueType.OBJECT) {
+                    var classObjectDef = classTypeValue.asJsonObject();
+                    var primaryKey = classObjectDef.getBoolean("primaryKey", false);
+                    classType = classObjectDef.getString("type");
+                    if (primaryKey) {
+                        primaryKeyTypeRef.set(classType);
+                    }
                 }
-            }
-            lines.
-                add(DEFINE_FIELD_PATTERN.formatted(StringUtils.repeat(SPACE, TAB_SIZE), classType,
-                    field));
-            if (importablesMap.containsKey(classType)) {
-                lines.add(6, IMPORT_PACKAGE_TEMPLATE.formatted(importablesMap.get(classType)));
-            }
-        });
+                javaFileBuilder.addVariableDeclaration(classType, field, null);
 
-        lines.add("}");
-        Optional.ofNullable(primaryKeyTypeRef.get()).ifPresentOrElse(primaryKeyType -> {
-            try {
-                FileClassUtil.writeClassFile(projectInfo, packageName, className, lines, DOMAIN);
-                log.info("{} class Created", className);
-
-                createRepository(projectInfo, repositoryPath, className, classDef, primaryKeyType);
-            } catch (IOException ex) {
-                log.error(ex.getMessage(), ex);
-            }
-        }, ()
-            -> log.error("You must specify a field that is of type \"primaryKey\" for the {} class",
-                className));
+            });
+            javaFileBuilder
+                .setModulePath(projectInfo.getString(DOMAIN))
+                .setModule(DOMAIN)
+                .setFileName(className)
+                .build();
+            Optional.ofNullable(primaryKeyTypeRef.get()).ifPresent(primaryKeyType -> {
+                try {
+                    createRepository(projectInfo, repositoryPath, className, classDef,
+                        primaryKeyType);
+                } catch (IOException ex) {
+                    log.error(ex.getMessage(), ex);
+                }
+            });
+        } catch (IOException ex) {
+            log.error(ex.getMessage(), ex);
+        }
 
     }
 

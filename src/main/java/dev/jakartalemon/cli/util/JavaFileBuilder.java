@@ -109,6 +109,9 @@ public class JavaFileBuilder {
         if (isConstructor) {
             constructorsVariablesSet.add(new String[]{variableType, variableName});
         }
+        if (importablesMap.containsKey(variableType)) {
+            importsList.add(importablesMap.get(variableType));
+        }
         return this;
     }
 
@@ -140,7 +143,7 @@ public class JavaFileBuilder {
         lines.add(StringUtils.EMPTY);
         importsList.forEach(importItem -> lines.add("import %s;".formatted(importItem)));
         lines.add(StringUtils.EMPTY);
-        lines.addAll(classAnnotationsList);
+        lines.addAll(classAnnotationsList.stream().map(annotation -> '@' + annotation).toList());
         lines.add("public class %s {".formatted(className));
         lines.add(StringUtils.EMPTY);
         lines.addAll(variablesList);
