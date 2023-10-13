@@ -79,7 +79,7 @@ public class JpaPersistenceHandler {
     private static final String IMPORT_ONE_TO_ONE = "import jakarta.persistence.OneToOne;";
     private static final String PERSISTENCE_FILE_NAME = "persistence.xml";
     private static final String PERSISTENCE = "persistence";
-    private static String[][] ASSOCIATIONS_DESCRIPTIONS = {
+    private static final String[][] ASSOCIATIONS_DESCRIPTIONS = {
         {MANY_TO_ONE, IMPORT_MANY_TO_ONE},
         {ONE_TO_ONE, IMPORT_ONE_TO_ONE}
     };

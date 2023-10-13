@@ -17,55 +17,98 @@ package dev.jakartalemon.cli.project.hexa.handler;
 
 import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.util.Constants;
+import dev.jakartalemon.cli.util.JsonFileUtil;
 import dev.jakartalemon.cli.util.PomUtil;
+import dev.jakartalemon.cli.util.RecordFileBuilder;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonString;
+import lombok.extern.slf4j.Slf4j;
+
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
+
+import static dev.jakartalemon.cli.util.Constants.APPLICATION;
+import static dev.jakartalemon.cli.util.Constants.MODEL;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 
 /**
- *
  * @author Diego Silva mailto:diego.silva@apuntesdejava.com
  */
 @Slf4j
 public class ApplicationModuleHandler {
-    
+
     private ApplicationModuleHandler() {
     }
-    
+
     public static ApplicationModuleHandler getInstance() {
         return ApplicationModuleHandlerHolder.INSTANCE;
+    }
+
+    public void createClases(JsonObject definitions) {
+        JsonFileUtil.getProjectInfo().ifPresent(projectInfo -> {
+
+            definitions.forEach(
+                (className, properties) -> createRecord(className, properties.asJsonObject(),
+                                                        projectInfo));
+        });
+    }
+
+    private void createRecord(String className, JsonObject properties,
+                              JsonObject projectInfo) {
+        try {
+            var packageName = projectInfo.getString(PACKAGE);
+            var recordFileBuilder = new RecordFileBuilder()
+                .setFileName(className)
+                .setPackage(packageName, APPLICATION, MODEL);
+            properties.forEach((property, propertyType) -> {
+                recordFileBuilder.addVariableDeclaration(
+                    openApiType2JavaType(((JsonString) propertyType).getString()), property);
+            });
+
+            recordFileBuilder
+                .setModulePath(projectInfo.getString(APPLICATION))
+                .setClassName(className)
+                .setModule(APPLICATION)
+                .build();
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
+        }
+    }
+
+    private String openApiType2JavaType(String openApiType) {
+        return switch (openApiType) {
+            case "string" -> "String";
+            default -> openApiType;
+        };
     }
 
     public Optional<Path> createApplicationModule(Path projectPath,
                                                   String groupId,
                                                   String artifactId,
-                                                  String version,
-                                                  String packageName) {
+                                                  String version) {
         PomModel.PomModelBuilder modulePom = PomModel.builder().
             parent(Map.of(Constants.GROUP_ID, groupId, Constants.ARTIFACT_ID, artifactId,
-            Constants.VERSION, version)).artifactId(Constants.APPLICATION).packaging(Constants.JAR).
+                          Constants.VERSION, version))
+            .artifactId(Constants.APPLICATION)
+            .packaging(Constants.WAR).
             dependencies(List.of(Map.of(Constants.GROUP_ID, Constants.PROJECT_GROUP_ID,
-            Constants.ARTIFACT_ID, Constants.DOMAIN, Constants.VERSION, Constants.PROJECT_VERSION),
-            Constants.JAKARTA_INJECT_DEPENDENCY));
+                                        Constants.ARTIFACT_ID, Constants.DOMAIN, Constants.VERSION,
+                                        Constants.PROJECT_VERSION),
+                                 Constants.JAKARTA_INJECT_DEPENDENCY));
         Optional<Path> pomPath = PomUtil.getInstance().
             createPom(projectPath.resolve(Constants.APPLICATION), modulePom.build());
         pomPath.ifPresent(pom -> {
             log.debug("application created at {}", pom.toAbsolutePath());
-            /*var parent = pom.getParent();
-            PomUtil.getInstance().createJavaProjectStructure(parent, PACKAGE_TEMPLATE.formatted(
-            packageName, APPLICATION, REPOSITORY));
-            PomUtil.getInstance()
-            .createJavaProjectStructure(parent,
-            PACKAGE_TEMPLATE.formatted(packageName, APPLICATION, MODEL));
-            PomUtil.getInstance().
-            createJavaProjectStructure(parent,
-            PACKAGE_TEMPLATE.formatted(packageName, APPLICATION, USECASE));*/
         });
         return pomPath;
     }
-    
+
+    public void addRestDepdendencies() {
+    }
+
     private static class ApplicationModuleHandlerHolder {
 
         private static final ApplicationModuleHandler INSTANCE = new ApplicationModuleHandler();

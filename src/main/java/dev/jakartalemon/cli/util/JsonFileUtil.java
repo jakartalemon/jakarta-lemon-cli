@@ -1,3 +1,18 @@
+/*
+ * Copyright 2023 Diego Silva <diego.silva at apuntesdejava.com>.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.jakartalemon.cli.util;
 
 import jakarta.json.Json;
@@ -11,6 +26,7 @@ import java.util.Optional;
 
 @Slf4j
 public class JsonFileUtil {
+
     private JsonFileUtil() {
     }
 
@@ -18,6 +34,7 @@ public class JsonFileUtil {
         var projectInfoPath = Path.of(Constants.PROJECT_INFO_JSON);
         return getFileJson(projectInfoPath);
     }
+
     public static Optional<JsonObject> getFileJson(Path path) {
 
         if (!Files.exists(path)) {
@@ -28,7 +45,7 @@ public class JsonFileUtil {
             var projectInfoReader = Json.createReader(
                 Files.newBufferedReader(path))) {
 
-            return Optional.of( projectInfoReader.readObject());
+            return Optional.of(projectInfoReader.readObject());
         } catch (IOException e) {
             log.error(e.getMessage(), e);
             return Optional.empty();

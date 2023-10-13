@@ -1,0 +1,84 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "description": "This is an example of OpenAPI for REST adapter created from Jakarta Lemon",
+    "summary": "Sample REST for Jakarta Lemon",
+    "title": "Sample REST for Jakarta Lemon",
+    "version": "3.1.0"
+  },
+  "paths": {
+    "/banks": {
+      "get": {
+        "operationId": "getBanksList",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Bank"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/accounts": {
+      "post": {
+        "operationId": "createAccount",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountRequest"
+              }
+
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json":{
+                "$ref": "#/components/schemas/AccountResponse"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccountResponse": {
+        "type": ["object"]
+      },
+      "AccountRequest": {
+        "type": ["object"],
+        "properties": {
+          "accountId": {
+            "type": ["string"]
+          },
+          "userId": {
+            "type": "string"
+          }
+        }
+      },
+     "Bank": {
+       "type": "object",
+       "properties": {
+         "bankId": {
+           "type": "string"
+         },
+         "name": {
+           "type": "string"
+         }
+       }
+     }
+
+    }
+  },
+  "jsonSchemaDialect": "https://spec.openapis.org/oas/3.1/dialect/base"
+}

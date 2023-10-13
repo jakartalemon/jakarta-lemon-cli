@@ -74,7 +74,7 @@ public class DomainModuleHandler {
                 javaFileBuilder);
             CLASSES_IMPORT_TEST.forEach(javaFileBuilder::addImportClass);
             var classTestName = "%sTest".formatted(className);
-            javaFileBuilder.addClassAnnotation("@ExtendWith(MockitoExtension.class)");
+            javaFileBuilder.addClassAnnotation("ExtendWith(MockitoExtension.class)");
             javaFileBuilder.setClassName(classTestName);
 
             classesInject.forEach(classInject -> {

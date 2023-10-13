@@ -25,6 +25,7 @@ import dev.jakartalemon.cli.util.JsonFileUtil;
 import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
@@ -75,6 +76,7 @@ public class InfrastructureModuleHandler {
     private final JsonObject databasesConfigs;
 
     private final List<String> props = List.of("url", "password", "user");
+    @Getter
     private String dataSourceName;
 
     private InfrastructureModuleHandler() {
@@ -84,10 +86,6 @@ public class InfrastructureModuleHandler {
 
     public static InfrastructureModuleHandler getInstance() {
         return InfrastructureModuleHandlerHolder.INSTANCE;
-    }
-
-    public String getDataSourceName() {
-        return dataSourceName;
     }
 
     private void createDataSourceClass(JsonObject projectInfo,
@@ -189,8 +187,7 @@ public class InfrastructureModuleHandler {
                     GROUP_ID, JAKARTA_ANOTATION,
                     ARTIFACT_ID, JAKARTA_ANOTATION_API,
                     VERSION, "${%s}".formatted(JAKARTA_ANOTATION_API_VERSION_KEY)
-                )
-                )
+                )                )
             ).buildModel(
                 BuildModel.builder()
                     .plugins(Json.createArrayBuilder()

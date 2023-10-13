@@ -37,6 +37,8 @@ import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
 import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANOTATION_API_VERSION_KEY;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_CDI_API_VERSION_KEY;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_SERVLET_VERSION_KEY;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_WS_RS_API_VERSION_KEY;
 import static dev.jakartalemon.cli.util.Constants.JAVA_VERSION;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_RELEASE;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
@@ -72,17 +74,18 @@ public class CreateHexagonalProject {
                 "project.build.sourceEncoding", "UTF-8",
                 MAVEN_COMPILER_RELEASE, JAVA_VERSION,
                 "mockito.junit.jupiter.version", "5.4.0",
-                "org.projectlombok.version", "1.18.28",
                 "org.mapstruct.version", "1.5.5.Final",
                 JAKARTA_CDI_API_VERSION_KEY, "4.0.1",
-                JAKARTA_ANOTATION_API_VERSION_KEY, "2.1.0"
+                JAKARTA_ANOTATION_API_VERSION_KEY, "2.1.0",
+                JAKARTA_WS_RS_API_VERSION_KEY, "3.1.0",
+                JAKARTA_SERVLET_VERSION_KEY, "6.0.0"
             ));
         PomUtil.getInstance().createPom(projectPath, projectPom.build());
 
         var domainPath = DomainModuleHandler.getInstance().createDomainModule(projectPath, groupId,
             artifactId, version, packageName);
         var appPath = ApplicationModuleHandler.getInstance().createApplicationModule(projectPath,
-            groupId, artifactId, version, packageName);
+            groupId, artifactId, version);
 
         var infraPath = InfrastructureModuleHandler.getInstance().
             createInfrastructureModule(projectPath,
