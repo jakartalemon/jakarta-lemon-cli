@@ -47,6 +47,7 @@ public class Constants {
     public static final String ENTITIES = "entities";
     public static final String ENTITY = "entity";
     public static final String POM = "pom";
+    public static final String POM_XML = "pom.xml";
     public static final String JAR = "jar";
     public static final String WAR = "war";
     public static final String ADAPTERS = "adapters";

@@ -15,11 +15,13 @@
  */
 package dev.jakartalemon.cli.project.hexa.handler;
 
+import dev.jakartalemon.cli.util.Constants;
 import static dev.jakartalemon.cli.util.Constants.APPLICATION;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 import static dev.jakartalemon.cli.util.Constants.RESOURCES;
 import io.swagger.parser.OpenAPIParser;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.json.Json;
@@ -37,8 +39,13 @@ import java.util.function.Consumer;
 
 import static dev.jakartalemon.cli.util.Constants.SLASH_CHAR;
 import dev.jakartalemon.cli.util.JavaFileBuilder;
+import dev.jakartalemon.cli.util.OpenApiUtil;
 import static dev.jakartalemon.cli.util.OpenApiUtil.getType;
+import io.swagger.v3.oas.models.media.Content;
+import io.swagger.v3.oas.models.parameters.Parameter;
+import jakarta.json.JsonValue;
 import java.io.IOException;
+import java.util.AbstractMap;
 
 /**
  * @author Diego Silva mailto:diego.silva@apuntesdejava.com
@@ -130,6 +137,92 @@ public class RestAdapterHandler {
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }
+    }
+
+    public void createResourcesPath(Map<String, List<PathItem>> pathDefinitions,
+                                    JsonObject projectInfo) {
+        log.info("Creating resources");
+        pathDefinitions.forEach((pathName, contents) -> createRestResourceBody(pathName, contents,
+            projectInfo));
+    }
+
+    private void createRestResourceBody(String pathName,
+                                        List<PathItem> contents,
+                                        JsonObject projectInfo) {
+        String className = StringUtils.capitalize(StringUtils.substringAfter(pathName, SLASH_CHAR)) + "Resource";
+        JavaFileBuilder javaFileBuilder = new JavaFileBuilder().setClassName(className).
+            addImportClass("jakarta.ws.rs.Path").
+            addImportClass("jakarta.ws.rs.container.AsyncResponse").
+            addImportClass("jakarta.ws.rs.container.Suspended").
+            addImportClass("java.util.concurrent.ArrayBlockingQueue").
+            addImportClass("java.util.concurrent.BlockingQueue").
+            addVariableDeclaration("BlockingQueue<AsyncResponse>", "SUSPENDED", null, false, true,
+                "new ArrayBlockingQueue<>(5)").
+            addClassAnnotation("Path(\"%s\")".formatted(pathName));
+        contents.forEach(pathItem -> {
+            Optional.ofNullable(pathItem.getGet()).
+                ifPresent(getOperation -> createMethod(getOperation, javaFileBuilder, "GET"));
+            Optional.ofNullable(pathItem.getPost()).
+                ifPresent(postOperation -> createMethod(postOperation, javaFileBuilder, "POST"));
+            Optional.ofNullable(pathItem.getDelete()).
+                ifPresent(deleteOperation -> createMethod(deleteOperation, javaFileBuilder, "DELETE"));
+            Optional.ofNullable(pathItem.getPut()).
+                ifPresent(putOperation -> createMethod(putOperation, javaFileBuilder, "PUT"));
+        });
+        try {
+            javaFileBuilder.setModulePath(projectInfo.getString(APPLICATION)).setModule(APPLICATION).
+                setFileName(className).
+                setPackage(projectInfo.getString(PACKAGE), APPLICATION, RESOURCES).build();
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
+        }
+    }
+
+    private void createMethod(Operation operation,
+                              JavaFileBuilder javaFileBuilder,
+                              String method) {
+
+        String operationId = operation.getOperationId();
+        List<Parameter> parameters = operation.getParameters();
+
+        List<String> annotations = new ArrayList<>();
+        annotations.add(method);
+        Optional.ofNullable(operation.getResponses()).
+            ifPresent(responses -> {
+                javaFileBuilder.addImportClass("jakarta.ws.rs.Produces");
+                responses.forEach((key, response) -> {
+                    Content content = response.getContent();
+                    String annotation = StringUtils.join(content.keySet().stream().
+                        map(str -> ('"' + str + '"')).toList(), Constants.COMMA);
+                    annotations.add("Produces({%s})".formatted(annotation));
+                });
+            });
+        Optional.ofNullable(operation.getRequestBody())
+            .ifPresent(requestBody -> {
+                javaFileBuilder.addImportClass("jakarta.ws.rs.Consumes");
+                Optional.ofNullable(requestBody.getContent()).ifPresent(content -> {
+                    String annotation = StringUtils.join(content.keySet().stream().
+                        map(str -> ('"' + str + '"')).toList(), Constants.COMMA);
+                    annotations.add("Consumes({%s})".formatted(annotation));
+                });
+
+            });
+        javaFileBuilder.addMethod(operationId,
+            convertParamsToList(parameters), "void", null,
+            annotations).addImportClass("jakarta.ws.rs." + method);
+    }
+
+    private List<Map.Entry<String, JsonValue>> convertParamsToList(List<Parameter> parameters) {
+        List<Map.Entry<String, JsonValue>> list = new ArrayList<>();
+        Optional.ofNullable(parameters).
+            ifPresent(parametersList -> parametersList.forEach(parameter -> {
+            String entryName = parameter.getName();
+            String type = OpenApiUtil.getType(parameter.getSchema());
+            Map.Entry<String, JsonValue> item = new AbstractMap.SimpleImmutableEntry<>(entryName,
+                Json.createValue(type));
+            list.add(item);
+        }));
+        return list;
     }
 
     private static class RestAdapterHandlerHolder {

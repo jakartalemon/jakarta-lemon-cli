@@ -35,6 +35,7 @@ import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
 import static dev.jakartalemon.cli.util.Constants.DEPENDENCY;
 import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
 import static dev.jakartalemon.cli.util.Constants.PLUGIN;
+import static dev.jakartalemon.cli.util.Constants.POM_XML;
 import static dev.jakartalemon.cli.util.Constants.VERSION;
 import static javax.xml.xpath.XPathConstants.NODESET;
 
@@ -60,7 +61,7 @@ public class PomUtil {
                                     PomModel pomModel) {
         try {
             Files.createDirectories(modulePath);
-            var pomPath = modulePath.resolve("pom.xml");
+            var pomPath = modulePath.resolve(POM_XML);
             var pomXml = DocumentXmlUtil.newDocument();
             var projectElemBuilder = ElementBuilder.newInstance("project")
                 .addAttribute("xmlns", "http://maven.apache.org/POM/4.0.0")
@@ -162,7 +163,7 @@ public class PomUtil {
 
     public void addPlugin(JsonObject plugin,
                           String... paths) {
-        var pathXml = Path.of(".", paths).resolve("pom.xml");
+        var pathXml = Path.of(".", paths).resolve(POM_XML);
         DocumentXmlUtil.openDocument(pathXml)
             .ifPresent(documentXml -> {
                 try {
@@ -189,7 +190,7 @@ public class PomUtil {
 
     public void addDependency(JsonObject dependency,
                               String... paths) {
-        var pathXml = Path.of(".", paths).resolve("pom.xml");
+        var pathXml = Path.of(".", paths).resolve(POM_XML);
 
         DocumentXmlUtil.openDocument(pathXml)
             .ifPresent(documentXml -> {
@@ -221,7 +222,7 @@ public class PomUtil {
 
     public PomUtil addProperty(JsonObject property,
                                String... paths) {
-        var pathXml = Path.of(".", paths).resolve("pom.xml");
+        var pathXml = Path.of(".", paths).resolve(POM_XML);
 
         DocumentXmlUtil.openDocument(pathXml)
             .ifPresent(documentXml -> {
@@ -233,9 +234,7 @@ public class PomUtil {
                             NODESET);
                         if (nodeList.getLength() == 0) {
                             DocumentXmlUtil.createElement(documentXml, "/project/properties", field)
-                                .ifPresent(element -> {
-                                    element.setTextContent(((JsonString) value).getString());
-                                });
+                                .ifPresent(element -> element.setTextContent(((JsonString) value).getString()));
                         }
                     } catch (XPathExpressionException ex) {
                         log.error(ex.getMessage(), ex);
