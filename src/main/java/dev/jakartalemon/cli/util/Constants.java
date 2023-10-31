@@ -87,6 +87,7 @@ public class Constants {
         "org.mockito.junit.jupiter.MockitoExtension");
 
     public static final String DEPENDENCY = "dependency";
+    public static final String PLUGIN = "plugin";
     public static final String PROJECT_INFO_JSON = "project_info.json";
     public static final Map<String, String> LOMBOK_DEPENDENCY = Map.of(
         GROUP_ID, "org.projectlombok",
@@ -105,6 +106,11 @@ public class Constants {
         VERSION, "2.0.1",
         SCOPE, "provided"
     );
+    public static final Map<String, String> INFRASTRUCTURE_DEPENDENCY = Map.of(
+        GROUP_ID, PROJECT_GROUP_ID,
+        ARTIFACT_ID, INFRASTRUCTURE,
+        VERSION, PROJECT_VERSION
+    );
     public static final String DOCS = "docs";
     public static final String DEPENDENCY_GROUP_ID = "groupId";
     public static final String DEPENDENCY_ARTIFACT_ID = "artifactId";
@@ -116,8 +122,14 @@ public class Constants {
     public static final String ONE_TO_ONE = "oneToOne";
 
     public static final String DEFINE_FIELD_PATTERN = "%s%s %s;";
+    public static final String MAVEN_QUERY_PAYARA_MICRO
+        = "q=g:fish.payara.extras+AND+a:payara-micro";
     public static final String MAVEN_QUERY_PERSISTENCE_API
         = "q=g:jakarta.persistence+AND+a:jakarta.persistence-api";
+    public static final String MAVEN_QUERY_JAKARTA_WS_RS_API
+        = "q=g:jakarta.ws.rs+AND+a:jakarta.ws.rs-api";
+    public static final String MAVEN_QUERY_LOMBOK
+        = "q=g:org.projectlombok+AND+a:lombok";
 
     public static final String RESPONSE = "response";
     /**
@@ -134,6 +146,7 @@ public class Constants {
 
     public static final String PRIVATE_FINAL_VARIABLE_TEMPLATE = "%sprivate final %s;";
     public static final String PRIVATE_VARIABLE_TEMPLATE = "%sprivate %s;";
+    public static final String PRIVATE_VARIABLE_STATIC_FINAL_TEMPLATE = "%sprivate static final %s;";
     // JAKARTA SPECS
     public static final String JAKARTA_ENTERPRISE = "jakarta.enterprise";
     public static final String JAKARTA_ANOTATION = "jakarta.annotation";
@@ -146,12 +159,20 @@ public class Constants {
     public static final String JAKARTA_WS_RS_API_VERSION_KEY = "jakarta.ws.rs-api.version";
     public static final String JAKARTA_SERVLET = "jakarta.servlet";
     public static final String JAKARTA_SERVLET_VERSION_KEY = "jakarta.servlet.version";
+    public static final String PROJECT_LOMBOK_VERSION_KEY = "org.projectlombok.version";
+
     // OPENAPI
     public static final String COMPONENTS = "components";
     public static final String SCHEMAS = "schemas";
     public static final String PROPERTIES = "properties";
+    public static final String PATHS = "paths";
+
+    public static final char SLASH_CHAR = '/';
+    public static final String CONFIGURATION = "configuration";
+//VERSION DEFAULT
+    public static final String PAYARA_VERSION_DEFAULT = "6.2023.10";
 
     private Constants() {
     }
-}
 
+}

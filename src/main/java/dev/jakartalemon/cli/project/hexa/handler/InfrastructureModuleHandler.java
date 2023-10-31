@@ -154,11 +154,11 @@ public class InfrastructureModuleHandler {
 
     }
 
-    public Optional<Path> createInfrastructureModule(Path projectPath,
-                                                     String groupId,
-                                                     String artifactId,
-                                                     String version,
-                                                     String packageName) {
+    public static Optional<Path> createInfrastructureModule(Path projectPath,
+                                                            String groupId,
+                                                            String artifactId,
+                                                            String version,
+                                                            String packageName) {
         var modulePom = PomModel.builder()
             .parent(Map.of(GROUP_ID, groupId,
                 ARTIFACT_ID, artifactId,
@@ -210,13 +210,13 @@ public class InfrastructureModuleHandler {
 
         pomPath.ifPresent(pom -> {
             log.debug("entities created at {}", pom.toAbsolutePath());
-            PomUtil.getInstance()
+            FileClassUtil
                 .createJavaProjectStructure(pom.getParent(), PACKAGE_TEMPLATE.formatted(
                     packageName, INFRASTRUCTURE, ENTITIES));
-            PomUtil.getInstance()
+            FileClassUtil
                 .createJavaProjectStructure(pom.getParent(), "%s.%s.mapper".formatted(
                     packageName, INFRASTRUCTURE));
-            PomUtil.getInstance()
+            FileClassUtil
                 .createJavaProjectStructure(pom.getParent(), PACKAGE_TEMPLATE.formatted(
                     packageName, INFRASTRUCTURE, ADAPTERS));
         });

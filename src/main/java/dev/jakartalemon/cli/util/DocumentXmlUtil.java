@@ -15,6 +15,9 @@
  */
 package dev.jakartalemon.cli.util;
 
+import jakarta.json.JsonObject;
+import jakarta.json.JsonString;
+import jakarta.json.JsonValue;
 import org.apache.commons.lang3.StringUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -54,9 +57,39 @@ public class DocumentXmlUtil {
 
     private static final Logger LOGGER = Logger.getLogger(DocumentXmlUtil.class.getName());
     private static final String STRIP_XSL_FILE_NAME = "/xml/strip.xsl";
+    private static final Map<String, String> NAMESPACES = Map.of(
+        "f", "http://xmlns.jcp.org/jsf/core",
+        "h", "http://xmlns.jcp.org/jsf/html",
+        "p", "http://primefaces.org/ui",
+        "ui", "http://xmlns.jcp.org/jsf/facelets"
+    );
 
-    private DocumentXmlUtil() {
+    public static void createElementWithContent(Document documentXml,
+                                                Element element,
+                                                JsonObject content) {
+        content.asJsonObject().forEach((key, value) -> {
+            var valueType = value.getValueType();
+            if (null != valueType) {
+                switch (valueType) {
+                    case STRING ->
+                        createElement(documentXml, element, key, ((JsonString) value).getString());
+                    case OBJECT ->
+                        createElement(documentXml, element, key).ifPresent(newElement -> {
+                            createElementWithContent(documentXml, newElement, value.asJsonObject());
+                        });
+                    case ARRAY ->
+                        createElement(documentXml, element, key).ifPresent(newElement -> {
+                            value.asJsonArray().forEach(item -> {
+                                if (item.getValueType() == JsonValue.ValueType.OBJECT) {
+                                    createElementWithContent(documentXml, newElement, item.
+                                        asJsonObject());
+                                }
+                            });
+                        });
 
+                }
+            }
+        });
     }
 
     /**
@@ -228,6 +261,10 @@ public class DocumentXmlUtil {
         }
     }
 
+    private DocumentXmlUtil() {
+
+    }
+
     /**
      * Constructor class that helps create elements with attributes and children
      */
@@ -303,10 +340,4 @@ public class DocumentXmlUtil {
 
     }
 
-    private static final Map<String, String> NAMESPACES = Map.of(
-        "f", "http://xmlns.jcp.org/jsf/core",
-        "h", "http://xmlns.jcp.org/jsf/html",
-        "p", "http://primefaces.org/ui",
-        "ui", "http://xmlns.jcp.org/jsf/facelets"
-    );
 }

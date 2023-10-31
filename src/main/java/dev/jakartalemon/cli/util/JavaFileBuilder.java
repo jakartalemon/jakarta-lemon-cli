@@ -21,6 +21,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -31,21 +32,22 @@ import java.util.stream.Collectors;
 import static dev.jakartalemon.cli.util.Constants.COMMA_SPACE;
 import static dev.jakartalemon.cli.util.Constants.DEFINE_FIELD_PATTERN;
 import static dev.jakartalemon.cli.util.Constants.PRIVATE_FINAL_VARIABLE_TEMPLATE;
+import static dev.jakartalemon.cli.util.Constants.PRIVATE_VARIABLE_STATIC_FINAL_TEMPLATE;
 import static dev.jakartalemon.cli.util.Constants.PRIVATE_VARIABLE_TEMPLATE;
 import static dev.jakartalemon.cli.util.Constants.PUBLIC;
 import static dev.jakartalemon.cli.util.Constants.RETURN;
 import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
 import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
 
 /**
- *
  * @author Diego Silva mailto:diego.silva@apuntesdejava.com
  */
 public class JavaFileBuilder {
 
     private String packageValue;
-    private final List<String> importsList = new ArrayList<>();
+    private final Set<String> importsList = new HashSet<>();
     private final List<String> classAnnotationsList = new ArrayList<>();
     private final List<String> variablesList = new ArrayList<>();
     private final List<String> methodsList = new ArrayList<>();
@@ -56,6 +58,7 @@ public class JavaFileBuilder {
     private String resource;
     private String fileName;
     private String packageName;
+    private String extendClass;
     private final Map<String, String> importablesMap;
 
     public JavaFileBuilder() {
@@ -66,9 +69,9 @@ public class JavaFileBuilder {
                                       String moduleName,
                                       String submoduleName) {
         this.packageName = Constants.PACKAGE_TEMPLATE.formatted(appPackage, moduleName,
-            submoduleName);
+                                                                submoduleName);
         this.packageValue = Constants.TEMPLATE_2_STRING_COMMA.formatted(Constants.PACKAGE,
-            packageName);
+                                                                        packageName);
         return this;
     }
 
@@ -82,6 +85,11 @@ public class JavaFileBuilder {
         return this;
     }
 
+    public JavaFileBuilder setExtendClass(String extendClass) {
+        this.extendClass = extendClass;
+        return this;
+    }
+
     public JavaFileBuilder setClassName(String className) {
         this.className = className;
         return this;
@@ -90,22 +98,40 @@ public class JavaFileBuilder {
     public JavaFileBuilder addVariableDeclaration(String variableType,
                                                   String variableName,
                                                   String variableAnnotation) {
-        addVariableDeclaration(variableType, variableName, variableAnnotation, false);
-        return this;
+        return addVariableDeclaration(variableType, variableName, variableAnnotation, false);
     }
 
     public JavaFileBuilder addVariableDeclaration(String variableType,
                                                   String variableName,
                                                   String variableAnnotation,
                                                   boolean isConstructor) {
+        return addVariableDeclaration(variableType, variableName, variableAnnotation, isConstructor,
+                                      false, null);
+    }
+
+    public JavaFileBuilder addVariableDeclaration(String variableType,
+                                                  String variableName,
+                                                  String variableAnnotation,
+                                                  boolean isConstructor,
+                                                  boolean isFinal,
+                                                  String variableInit) {
         Optional.ofNullable(variableAnnotation).ifPresent(annotation -> variablesList.add("%s@%s".
-            formatted(StringUtils.repeat(SPACE, TAB_SIZE), annotation)));
-        var declarations = TEMPLATE_2_STRING.formatted(variableType, variableName);
-        var variableDeclarationTemplate = isConstructor
-                                      ? PRIVATE_FINAL_VARIABLE_TEMPLATE
-                                      : PRIVATE_VARIABLE_TEMPLATE;
-        variablesList.add(variableDeclarationTemplate.formatted(StringUtils.repeat(SPACE, TAB_SIZE),
-            declarations));
+                                                                                              formatted(
+                                                                                                  StringUtils.repeat(
+                                                                                                      SPACE,
+                                                                                                      TAB_SIZE),
+                                                                                                  annotation)));
+        var declarations = TEMPLATE_2_STRING.formatted(variableType, variableName)
+            + (StringUtils.isNotEmpty(variableInit) ? (" = " + variableInit) : EMPTY);
+        var variableDeclarationTemplate = isFinal ? PRIVATE_VARIABLE_STATIC_FINAL_TEMPLATE :
+            (isConstructor
+                ? PRIVATE_FINAL_VARIABLE_TEMPLATE
+                : PRIVATE_VARIABLE_TEMPLATE);
+        var variableDeclaration =
+            variableDeclarationTemplate.formatted(StringUtils.repeat(SPACE, TAB_SIZE),
+                                                  declarations);
+
+        variablesList.add(variableDeclaration);
         if (isConstructor) {
             constructorsVariablesSet.add(new String[]{variableType, variableName});
         }
@@ -144,7 +170,11 @@ public class JavaFileBuilder {
         importsList.forEach(importItem -> lines.add("import %s;".formatted(importItem)));
         lines.add(StringUtils.EMPTY);
         lines.addAll(classAnnotationsList.stream().map(annotation -> '@' + annotation).toList());
-        lines.add("public class %s {".formatted(className));
+        if (StringUtils.isBlank(extendClass)) {
+            lines.add("public class %s {".formatted(className));
+        } else {
+            lines.add("public class %s extends %s {".formatted(className, extendClass));
+        }
         lines.add(StringUtils.EMPTY);
         lines.addAll(variablesList);
         if (!constructorsVariablesSet.isEmpty()) {
@@ -163,6 +193,15 @@ public class JavaFileBuilder {
                                      List<Map.Entry<String, JsonValue>> params,
                                      String returnValue,
                                      String defaultReturnValue) {
+        return addMethod(methodName, params, returnValue, defaultReturnValue, null);
+
+    }
+
+    public JavaFileBuilder addMethod(String methodName,
+                                     List<Map.Entry<String, JsonValue>> params,
+                                     String returnValue,
+                                     String defaultReturnValue,
+                                     List<String> annotations) {
         var parameters = params.stream().map(param -> {
             var paramType = ((JsonString) param.getValue()).getString();
             if (importablesMap.containsKey(paramType)) {
@@ -171,13 +210,19 @@ public class JavaFileBuilder {
             return TEMPLATE_2_STRING.formatted(paramType, param.getKey());
 
         }).collect(Collectors.joining(COMMA_SPACE));
+        Optional.ofNullable(annotations).ifPresent(annotationsList -> {
+            methodsList.add(String.join(System.lineSeparator(),
+                                        annotationsList.stream()
+                                            .map(annotation -> "%s@%s".formatted(StringUtils.repeat(
+                                                SPACE, TAB_SIZE), annotation)).toList()));
+        });
         var methodSignature = "%s%s %s %s (%s) {".formatted(StringUtils.repeat(
             SPACE, TAB_SIZE), PUBLIC, returnValue, methodName, parameters);
         methodsList.add(methodSignature);
         if (defaultReturnValue != null) {
             methodsList.add(DEFINE_FIELD_PATTERN.
-                formatted(StringUtils.repeat(SPACE, TAB_SIZE * 2),
-                    RETURN, defaultReturnValue));
+                                formatted(StringUtils.repeat(SPACE, TAB_SIZE * 2),
+                                          RETURN, defaultReturnValue));
         }
         methodsList.add("%s}".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
         return this;
@@ -188,9 +233,10 @@ public class JavaFileBuilder {
         var constructorParameters = constructorsVariablesSet.stream().map(
             variable -> variable[0] + SPACE + variable[1]).collect(Collectors.joining(COMMA_SPACE));
         lines.add("%s%s %s (%s){".formatted(StringUtils.repeat(SPACE, TAB_SIZE), PUBLIC, className,
-            constructorParameters));
+                                            constructorParameters));
         constructorsVariablesSet.forEach(variable
-            -> lines.add("%sthis.%2$s = %2$s;".formatted(StringUtils.repeat(
+                                             -> lines.add(
+            "%sthis.%2$s = %2$s;".formatted(StringUtils.repeat(
                 SPACE, TAB_SIZE * 2), variable[1])));
         lines.add("%s}".formatted(StringUtils.repeat(
             SPACE, TAB_SIZE)));

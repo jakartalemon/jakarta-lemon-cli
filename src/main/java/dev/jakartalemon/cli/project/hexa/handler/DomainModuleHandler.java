@@ -18,6 +18,7 @@ package dev.jakartalemon.cli.project.hexa.handler;
 import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.project.hexa.AddModelCommand;
 import dev.jakartalemon.cli.util.Constants;
+import dev.jakartalemon.cli.util.FileClassUtil;
 import dev.jakartalemon.cli.util.HttpClientUtil;
 import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.JsonObject;
@@ -94,11 +95,11 @@ public class DomainModuleHandler {
         }
     }
 
-    public Optional<Path> createDomainModule(Path projectPath,
-                                             String groupId,
-                                             String artifactId,
-                                             String version,
-                                             String packageName) {
+    public static Optional<Path> createDomainModule(Path projectPath,
+                                                    String groupId,
+                                                    String artifactId,
+                                                    String version,
+                                                    String packageName) {
 
         var modulePom = PomModel.builder().parent(Map.of(
             GROUP_ID, groupId,
@@ -116,12 +117,12 @@ public class DomainModuleHandler {
         pomPath.ifPresent(pom -> {
             log.debug("domain created at {}", pom);
             var parent = pom.getParent();
-            PomUtil.getInstance().createJavaProjectStructure(parent, PACKAGE_TEMPLATE.formatted(
+            FileClassUtil.createJavaProjectStructure(parent, PACKAGE_TEMPLATE.formatted(
                 packageName, DOMAIN, REPOSITORY));
-            PomUtil.getInstance()
+            FileClassUtil
                 .createJavaProjectStructure(parent,
                     PACKAGE_TEMPLATE.formatted(packageName, DOMAIN, MODEL));
-            PomUtil.getInstance().
+            FileClassUtil.
                 createJavaProjectStructure(parent,
                     PACKAGE_TEMPLATE.formatted(packageName, DOMAIN, USECASE));
         });

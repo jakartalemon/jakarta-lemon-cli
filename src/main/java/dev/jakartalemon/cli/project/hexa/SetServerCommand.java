@@ -15,47 +15,51 @@
  */
 package dev.jakartalemon.cli.project.hexa;
 
-import dev.jakartalemon.cli.project.hexa.handler.ApplicationModuleHandler;
-import dev.jakartalemon.cli.project.hexa.handler.RestAdapterHandler;
-
-import java.io.File;
-
+import dev.jakartalemon.cli.project.hexa.handler.PayaraHandler;
 import dev.jakartalemon.cli.util.JsonFileUtil;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import picocli.CommandLine;
 
 /**
+ *
  * @author Diego Silva mailto:diego.silva@apuntesdejava.com
  */
 @CommandLine.Command(
-    name = "addrestadapter",
+    name = "setserver",
     resourceBundle = "messages",
-    description = "Create a REST adapter based on Jakarta EE"
+    description = "Set server"
 )
 @Slf4j
-public class AddRestAdapterCommand implements Runnable {
+public class SetServerCommand implements Runnable {
 
     @CommandLine.Parameters(
-        paramLabel = "openapi.json",
-        descriptionKey = "openapi_definition"
+        paramLabel = "setserver.parameter",
+        descriptionKey = "setserver_parameter"
     )
-    private File file;
+    private String serverName;
 
     @Override
     public void run() {
-        var appModuleHandler = ApplicationModuleHandler.getInstance();
-        appModuleHandler.addRestDependencies();
-        var restAdapterHandler = RestAdapterHandler.getInstance();
-        restAdapterHandler.loadOpenApiDefinition(file);
-        JsonFileUtil.getProjectInfo().ifPresent(projectInfo -> {
-            restAdapterHandler.createComponents(
-                definitions -> appModuleHandler.createRecords(definitions, projectInfo));
-            restAdapterHandler.createPaths(
-                pathDefinitions -> appModuleHandler.createResourcesPath(pathDefinitions,
-                    projectInfo));
-            restAdapterHandler.createApplicationPath(projectInfo);
-        });
+        switch (StringUtils.upperCase(serverName)) {
+            case "PAYARA_MICRO":
+            case "PAYARAMICRO":
+                setPayaraMicro();
+                break;
+        }
+    }
 
+    private void setPayaraMicro() {
+        JsonFileUtil.getProjectInfo().ifPresent(projectInfo -> {
+            try {
+                var payaraHandler = PayaraHandler.getInstance();
+                payaraHandler.addPayaraMicroPlugin();
+            } catch (InterruptedException | IOException | URISyntaxException ex) {
+                log.error(ex.getMessage(), ex);
+            }
+        });
     }
 
 }

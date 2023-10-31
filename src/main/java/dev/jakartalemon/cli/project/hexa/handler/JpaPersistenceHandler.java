@@ -112,14 +112,14 @@ public class JpaPersistenceHandler {
     private boolean checkAssociation(List<String> lines,
                                      JsonObject definitionValue) {
         for (var descriptionsRow : ASSOCIATIONS_DESCRIPTIONS) {
-            var anotation = descriptionsRow[0];
-            if (definitionValue.containsKey(anotation)) {
+            var annotation = descriptionsRow[0];
+            if (definitionValue.containsKey(annotation)) {
                 var importDeclaration = descriptionsRow[1];
                 if (!lines.contains(importDeclaration)) {
                     lines.add(2, importDeclaration);
                 }
                 lines.add("%s@%s".formatted(StringUtils.repeat(SPACE, TAB_SIZE), StringUtils.
-                    capitalize(anotation)));
+                    capitalize(annotation)));
                 return true;
             }
         }

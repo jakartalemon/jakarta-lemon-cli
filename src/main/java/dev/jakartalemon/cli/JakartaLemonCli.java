@@ -20,6 +20,7 @@ import dev.jakartalemon.cli.project.hexa.AddEntityCommand;
 import dev.jakartalemon.cli.project.hexa.AddModelCommand;
 import dev.jakartalemon.cli.project.hexa.AddRestAdapterCommand;
 import dev.jakartalemon.cli.project.hexa.AddUseCaseCommand;
+import dev.jakartalemon.cli.project.hexa.SetServerCommand;
 
 import java.util.concurrent.Callable;
 
@@ -45,7 +46,8 @@ import picocli.CommandLine.HelpCommand;
         AddModelCommand.class,
         AddUseCaseCommand.class,
         AddEntityCommand.class,
-        AddRestAdapterCommand.class
+        AddRestAdapterCommand.class,
+        SetServerCommand.class,
     }
 )
 public class JakartaLemonCli implements Callable<Integer> {

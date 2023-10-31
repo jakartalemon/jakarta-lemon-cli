@@ -45,9 +45,9 @@ public class DependenciesUtil {
      *
      * @param query Query string that is sent to the Maven API
      * @return JSON object with the dependency found, or {@link Optional#empty()} if not found.
-     * @throws java.lang.InterruptedException
-     * @throws java.io.IOException
-     * @throws java.net.URISyntaxException
+     * @throws java.lang.InterruptedException when a InterruptedException occurs
+     * @throws java.io.IOException when a IO Exception occurs
+     * @throws java.net.URISyntaxException when a URISyntaxException occurs
      */
     public static Optional<JsonObject> getLastVersionDependency(String query)
         throws InterruptedException, IOException, URISyntaxException {
