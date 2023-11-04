@@ -29,7 +29,6 @@ import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.Json;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.Map;
 
 /**
  *
@@ -67,26 +66,6 @@ public class PayaraHandler {
                             .add(ARTIFACT_ID, "payara-micro")
                             .add(VERSION, "${payara.version}")
                     )
-                    .add(
-                        "commandLineOptions",
-                        Json.createArrayBuilder()
-                            .add(Json.createObjectBuilder()
-                                .add("option",
-                                    Json.createObjectBuilder(
-                                        Map.of(
-                                            "key", "--autoBindHttp",
-                                            "value", "true")
-                                    )))
-                            .add(Json.createObjectBuilder()
-                                .add("option",
-                                    Json.createObjectBuilder(
-                                        Map.of(
-                                            "key", "--deploy",
-                                            "value",
-                                            "${project.build.directory}/${project.build.finalName}")
-                                    )
-                                )
-                            ))
                     .add("deployWar", "false")
                 )
                 .build(), APPLICATION);

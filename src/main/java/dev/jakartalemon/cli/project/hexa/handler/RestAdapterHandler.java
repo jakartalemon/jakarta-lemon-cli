@@ -15,21 +15,25 @@
  */
 package dev.jakartalemon.cli.project.hexa.handler;
 
+import dev.jakartalemon.cli.model.ResourceDto;
 import dev.jakartalemon.cli.util.Constants;
-import static dev.jakartalemon.cli.util.Constants.APPLICATION;
-import static dev.jakartalemon.cli.util.Constants.PACKAGE;
-import static dev.jakartalemon.cli.util.Constants.RESOURCES;
+import dev.jakartalemon.cli.util.JavaFileBuilder;
+import dev.jakartalemon.cli.util.OpenApiUtil;
 import io.swagger.parser.OpenAPIParser;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
-import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.parameters.Parameter;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonValue;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,15 +41,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import static dev.jakartalemon.cli.util.Constants.APPLICATION;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE;
+import static dev.jakartalemon.cli.util.Constants.RESOURCES;
 import static dev.jakartalemon.cli.util.Constants.SLASH_CHAR;
-import dev.jakartalemon.cli.util.JavaFileBuilder;
-import dev.jakartalemon.cli.util.OpenApiUtil;
 import static dev.jakartalemon.cli.util.OpenApiUtil.getType;
-import io.swagger.v3.oas.models.media.Content;
-import io.swagger.v3.oas.models.parameters.Parameter;
-import jakarta.json.JsonValue;
-import java.io.IOException;
-import java.util.AbstractMap;
 
 /**
  * @author Diego Silva mailto:diego.silva@apuntesdejava.com
@@ -55,7 +55,7 @@ public class RestAdapterHandler {
 
     private JsonObject schemas;
     private OpenAPI openAPI;
-    private Map<String, List<PathItem>> pathsGroup;
+    private Map<String, List<ResourceDto>> pathsGroup;
 
     private RestAdapterHandler() {
     }
@@ -89,12 +89,10 @@ public class RestAdapterHandler {
         openAPI.getComponents().getSchemas().forEach((schemaName, schema) -> {
             var type = getType(schema);
             var schemaDefinition = Json.createObjectBuilder();
-            Optional.ofNullable(schema.getProperties()).ifPresent(properties -> {
-                properties.forEach((propertyName, property) -> {
-                    var propertyType = getType((Schema<?>) property);
-                    schemaDefinition.add((String) propertyName, propertyType);
-                });
-            });
+            Optional.ofNullable(schema.getProperties()).ifPresent(properties -> properties.forEach((propertyName, property) -> {
+                var propertyType = getType((Schema<?>) property);
+                schemaDefinition.add((String) propertyName, propertyType);
+            }));
             jsonBuilder.add(schemaName, schemaDefinition);
 
         });
@@ -102,18 +100,20 @@ public class RestAdapterHandler {
         schemas = jsonBuilder.build();
     }
 
-    public void createPaths(Consumer<Map<String, List<PathItem>>> consumer) {
+    public void createPaths(Consumer<Map<String, List<ResourceDto>>> consumer) {
         loadPathsDefinitions();
         consumer.accept(pathsGroup);
     }
 
     private void loadPathsDefinitions() {
         this.pathsGroup = new LinkedHashMap<>();
+
         openAPI.getPaths().forEach((pathName, pathItem) -> {
             var endPos = StringUtils.indexOf(pathName, SLASH_CHAR, 1);
             var prefix = endPos >= 0 ? StringUtils.substring(pathName, 0, endPos) : pathName;
-            List<PathItem> paths = pathsGroup.getOrDefault(prefix, new ArrayList<>());
-            paths.add(pathItem);
+            List<ResourceDto> paths = pathsGroup.getOrDefault(prefix, new ArrayList<>());
+            paths.add( new ResourceDto(pathName,  pathItem));
+
             pathsGroup.putIfAbsent(prefix, paths);
         });
 
@@ -139,7 +139,7 @@ public class RestAdapterHandler {
         }
     }
 
-    public void createResourcesPath(Map<String, List<PathItem>> pathDefinitions,
+    public void createResourcesPath(Map<String, List<ResourceDto>> pathDefinitions,
                                     JsonObject projectInfo) {
         log.info("Creating resources");
         pathDefinitions.forEach((pathName, contents) -> createRestResourceBody(pathName, contents,
@@ -147,7 +147,7 @@ public class RestAdapterHandler {
     }
 
     private void createRestResourceBody(String pathName,
-                                        List<PathItem> contents,
+                                        List<ResourceDto> contents,
                                         JsonObject projectInfo) {
         String className = StringUtils.capitalize(StringUtils.substringAfter(pathName, SLASH_CHAR)) + "Resource";
         JavaFileBuilder javaFileBuilder = new JavaFileBuilder().setClassName(className).
@@ -159,15 +159,22 @@ public class RestAdapterHandler {
             addVariableDeclaration("BlockingQueue<AsyncResponse>", "SUSPENDED", null, false, true,
                 "new ArrayBlockingQueue<>(5)").
             addClassAnnotation("Path(\"%s\")".formatted(pathName));
-        contents.forEach(pathItem -> {
+        contents.forEach(dto -> {
+            var pathItem = dto.pathItem();
+            var parameters = pathItem.getParameters();
+            var resourceName = dto.pathName();
             Optional.ofNullable(pathItem.getGet()).
-                ifPresent(getOperation -> createMethod(getOperation, javaFileBuilder, "GET"));
+                ifPresent(getOperation -> createMethod(getOperation, javaFileBuilder, "GET",
+                                                       parameters, resourceName));
             Optional.ofNullable(pathItem.getPost()).
-                ifPresent(postOperation -> createMethod(postOperation, javaFileBuilder, "POST"));
+                ifPresent(postOperation -> createMethod(postOperation, javaFileBuilder, "POST",
+                                                        parameters, resourceName));
             Optional.ofNullable(pathItem.getDelete()).
-                ifPresent(deleteOperation -> createMethod(deleteOperation, javaFileBuilder, "DELETE"));
+                ifPresent(deleteOperation -> createMethod(deleteOperation, javaFileBuilder, "DELETE",
+                                                          parameters, resourceName));
             Optional.ofNullable(pathItem.getPut()).
-                ifPresent(putOperation -> createMethod(putOperation, javaFileBuilder, "PUT"));
+                ifPresent(putOperation -> createMethod(putOperation, javaFileBuilder, "PUT",
+                                                       parameters, resourceName));
         });
         try {
             javaFileBuilder.setModulePath(projectInfo.getString(APPLICATION)).setModule(APPLICATION).
@@ -180,10 +187,10 @@ public class RestAdapterHandler {
 
     private void createMethod(Operation operation,
                               JavaFileBuilder javaFileBuilder,
-                              String method) {
+                              String method, List<Parameter> parameters, String pathName) {
 
         String operationId = operation.getOperationId();
-        List<Parameter> parameters = operation.getParameters();
+
 
         List<String> annotations = new ArrayList<>();
         annotations.add(method);
