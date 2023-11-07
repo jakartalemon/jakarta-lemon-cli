@@ -44,9 +44,9 @@ import static dev.jakartalemon.cli.util.Constants.DOMAIN;
 import static dev.jakartalemon.cli.util.Constants.ENTITIES;
 import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
 import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
-import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANOTATION;
-import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANOTATION_API;
-import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANOTATION_API_VERSION_KEY;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANNOTATION;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANNOTATION_API;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANNOTATION_API_VERSION_KEY;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_CDI_API;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_CDI_API_VERSION_KEY;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_ENTERPRISE;
@@ -92,7 +92,7 @@ public class InfrastructureModuleHandler {
                                        String dataSourceClass,
                                        JsonObject connectionInfo) {
         try {
-            this.dataSourceName="java:global/App/Datasource";
+            this.dataSourceName = "java:global/App/Datasource";
             List<String> lines = new ArrayList<>();
             var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), INFRASTRUCTURE,
                 ADAPTERS);
@@ -103,7 +103,8 @@ public class InfrastructureModuleHandler {
             lines.add("@DataSourceDefinition(");
             lines.add("%sclassName = \"%s\",".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
                 dataSourceClass));
-            lines.add("%sname = \"%s\",".formatted(StringUtils.repeat(SPACE,TAB_SIZE),dataSourceName));
+            lines.add("%sname = \"%s\",".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
+                dataSourceName));
             props.forEach(prop -> {
                 if (connectionInfo.containsKey(prop)) {
                     lines.add("%s%s = \"%s\",".formatted(StringUtils.repeat(SPACE,
@@ -184,10 +185,10 @@ public class InfrastructureModuleHandler {
                     ARTIFACT_ID, JAKARTA_CDI_API,
                     VERSION, "${%s}".formatted(JAKARTA_CDI_API_VERSION_KEY)
                 ), Map.of(
-                    GROUP_ID, JAKARTA_ANOTATION,
-                    ARTIFACT_ID, JAKARTA_ANOTATION_API,
-                    VERSION, "${%s}".formatted(JAKARTA_ANOTATION_API_VERSION_KEY)
-                )                )
+                    GROUP_ID, JAKARTA_ANNOTATION,
+                    ARTIFACT_ID, JAKARTA_ANNOTATION_API,
+                    VERSION, "${%s}".formatted(JAKARTA_ANNOTATION_API_VERSION_KEY)
+                ))
             ).buildModel(
                 BuildModel.builder()
                     .plugins(Json.createArrayBuilder()

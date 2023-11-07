@@ -129,6 +129,8 @@ public class Constants {
         = "q=g:jakarta.persistence+AND+a:jakarta.persistence-api";
     public static final String MAVEN_QUERY_JAKARTA_WS_RS_API
         = "q=g:jakarta.ws.rs+AND+a:jakarta.ws.rs-api";
+    public static final String MAVEN_QUERY_RXJAVA
+        = "q=g:io.reactivex.rxjava3+AND+a:rxjava";
     public static final String MAVEN_QUERY_LOMBOK
         = "q=g:org.projectlombok+AND+a:lombok";
 
@@ -147,13 +149,15 @@ public class Constants {
 
     public static final String PRIVATE_FINAL_VARIABLE_TEMPLATE = "%sprivate final %s;";
     public static final String PRIVATE_VARIABLE_TEMPLATE = "%sprivate %s;";
-    public static final String PRIVATE_VARIABLE_STATIC_FINAL_TEMPLATE = "%sprivate static final %s;";
+    public static final String PRIVATE_VARIABLE_STATIC_FINAL_TEMPLATE
+        = "%sprivate static final %s;";
     // JAKARTA SPECS
     public static final String JAKARTA_ENTERPRISE = "jakarta.enterprise";
-    public static final String JAKARTA_ANOTATION = "jakarta.annotation";
+    public static final String JAKARTA_ANNOTATION = "jakarta.annotation";
     public static final String JAKARTA_CDI_API_VERSION_KEY = "jakarta.enterprise.cdi-api.version";
-    public static final String JAKARTA_ANOTATION_API_VERSION_KEY = "jakarta.annotation-api.version";
-    public static final String JAKARTA_ANOTATION_API = "jakarta.annotation-api";
+    public static final String JAKARTA_ANNOTATION_API_VERSION_KEY
+        = "jakarta.annotation-api.version";
+    public static final String JAKARTA_ANNOTATION_API = "jakarta.annotation-api";
     public static final String JAKARTA_CDI_API = "jakarta.enterprise.cdi-api";
     public static final String JAKARTA_WS_RS = "jakarta.ws.rs";
     public static final String JAKARTA_WS_RS_API = "jakarta.ws.rs-api";
@@ -162,16 +166,17 @@ public class Constants {
     public static final String JAKARTA_SERVLET_VERSION_KEY = "jakarta.servlet.version";
     public static final String PROJECT_LOMBOK_VERSION_KEY = "org.projectlombok.version";
 
-    // OPENAPI
-    public static final String COMPONENTS = "components";
-    public static final String SCHEMAS = "schemas";
-    public static final String PROPERTIES = "properties";
-    public static final String PATHS = "paths";
-
     public static final char SLASH_CHAR = '/';
+    public static final String PATH_PARAM = "path";
     public static final String CONFIGURATION = "configuration";
-//VERSION DEFAULT
+    //VERSION DEFAULT
     public static final String PAYARA_VERSION_DEFAULT = "6.2023.10";
+    // OPENAPI
+    public static final String OPEN_API_IN_QUERY = "query";
+    public static final String OPEN_API_IN_PATH = "path";
+    public static final String OPEN_API_IN = "in";
+    public static final String OPEN_API_TYPE = "type";
+    public static final String ANNOTATION_FIELD = "annotation";
 
     private Constants() {
     }

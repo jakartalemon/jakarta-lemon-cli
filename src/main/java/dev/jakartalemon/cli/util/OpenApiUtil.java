@@ -6,7 +6,7 @@ import java.util.Optional;
 public class OpenApiUtil {
 
     public static String getType(
-                          Schema<?> schema) {
+        Schema<?> schema) {
         return Optional.ofNullable(schema.getType()).
             orElseGet(() -> schema.getTypes() != null ? schema.getTypes().stream().findFirst().
             orElse(null) : null);
@@ -14,8 +14,10 @@ public class OpenApiUtil {
 
     public static String openApiType2JavaType(String openApiType) {
         return switch (openApiType) {
-            case "string" ->  "String";
-            default -> openApiType;
+            case "string" ->
+                "String";
+            default ->
+                openApiType;
         };
     }
 }

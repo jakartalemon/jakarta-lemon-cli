@@ -35,6 +35,7 @@ import java.util.Optional;
 
 import static dev.jakartalemon.cli.util.Constants.APPLICATION;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_JAKARTA_WS_RS_API;
+import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_RXJAVA;
 import static dev.jakartalemon.cli.util.Constants.MODEL;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 import static dev.jakartalemon.cli.util.OpenApiUtil.openApiType2JavaType;
@@ -142,6 +143,9 @@ public class ApplicationModuleHandler {
         try {
             DependenciesUtil.getLastVersionDependency(
                 MAVEN_QUERY_JAKARTA_WS_RS_API).ifPresent(dependency -> PomUtil.getInstance()
+                .addDependency(dependency, APPLICATION));
+            DependenciesUtil.getLastVersionDependency(
+                MAVEN_QUERY_RXJAVA).ifPresent(dependency -> PomUtil.getInstance()
                 .addDependency(dependency, APPLICATION));
         } catch (InterruptedException | IOException | URISyntaxException e) {
             log.error(e.getMessage(), e);

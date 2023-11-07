@@ -38,7 +38,7 @@ import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
 import static dev.jakartalemon.cli.util.Constants.DOMAIN;
 import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
 import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
-import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANOTATION_API_VERSION_KEY;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANNOTATION_API_VERSION_KEY;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_CDI_API_VERSION_KEY;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_SERVLET_VERSION_KEY;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_WS_RS_API_VERSION_KEY;
@@ -87,7 +87,7 @@ public class CreateHexagonalProject {
                 "mockito.junit.jupiter.version", "5.4.0",
                 "org.mapstruct.version", "1.5.5.Final",
                 JAKARTA_CDI_API_VERSION_KEY, "4.0.1",
-                JAKARTA_ANOTATION_API_VERSION_KEY, "2.1.0",
+                JAKARTA_ANNOTATION_API_VERSION_KEY, "2.1.0",
                 JAKARTA_WS_RS_API_VERSION_KEY, "3.1.0",
                 JAKARTA_SERVLET_VERSION_KEY, "6.0.0",
                 PROJECT_LOMBOK_VERSION_KEY, lombokVersion

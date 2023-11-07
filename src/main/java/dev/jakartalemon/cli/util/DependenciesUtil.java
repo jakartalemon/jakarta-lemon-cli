@@ -36,6 +36,7 @@ import static dev.jakartalemon.cli.util.Constants.RESPONSE;
 
 @Slf4j
 public class DependenciesUtil {
+
     private DependenciesUtil() {
 
     }

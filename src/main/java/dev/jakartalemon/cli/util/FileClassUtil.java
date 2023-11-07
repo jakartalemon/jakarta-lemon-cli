@@ -28,6 +28,7 @@ import static dev.jakartalemon.cli.util.Constants.JAVA;
 import static dev.jakartalemon.cli.util.Constants.MAIN;
 import static dev.jakartalemon.cli.util.Constants.SRC;
 import static dev.jakartalemon.cli.util.Constants.TEST;
+
 @Slf4j
 public class FileClassUtil {
 
@@ -71,10 +72,11 @@ public class FileClassUtil {
 
     }
 
-    public static void createJavaProjectStructure(Path sourcePath, String... packagesName) {
+    public static void createJavaProjectStructure(Path sourcePath,
+                                                  String... packagesName) {
         try {
-            var created =
-                Files.createDirectories(sourcePath.resolve(SRC).resolve(MAIN).resolve(JAVA));
+            var created
+                = Files.createDirectories(sourcePath.resolve(SRC).resolve(MAIN).resolve(JAVA));
             Files.createDirectories(sourcePath.resolve(SRC).resolve(MAIN).resolve("resources"));
             Files.createDirectories(sourcePath.resolve(SRC).resolve(TEST).resolve(JAVA));
             Files.createDirectories(sourcePath.resolve(SRC).resolve(TEST).resolve("resources"));

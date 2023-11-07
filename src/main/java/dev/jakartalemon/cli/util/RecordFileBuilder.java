@@ -31,6 +31,7 @@ import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING;
 import static org.apache.commons.lang3.StringUtils.SPACE;
 
 public class RecordFileBuilder {
+
     private Map<String, String> importablesMap;
     private final List<String> variablesList = new ArrayList<>();
     private String packageName;
@@ -49,9 +50,9 @@ public class RecordFileBuilder {
                                         String moduleName,
                                         String submoduleName) {
         this.packageName = Constants.PACKAGE_TEMPLATE.formatted(appPackage, moduleName,
-                                                                submoduleName);
+            submoduleName);
         this.packageValue = Constants.TEMPLATE_2_STRING_COMMA.formatted(Constants.PACKAGE,
-                                                                        packageName);
+            packageName);
         return this;
     }
 
@@ -82,11 +83,13 @@ public class RecordFileBuilder {
         this.resource = resource;
         return this;
     }
+
     public RecordFileBuilder setModule(String module) {
 
         this.module = module;
         return this;
     }
+
     public void build() throws IOException {
         List<String> lines = new ArrayList<>();
         lines.add(packageValue);

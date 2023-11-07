@@ -27,13 +27,12 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
-import jakarta.json.JsonValue;
+import jakarta.json.JsonObjectBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,11 +40,21 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import static dev.jakartalemon.cli.util.Constants.ANNOTATION_FIELD;
 import static dev.jakartalemon.cli.util.Constants.APPLICATION;
+import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN;
+import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN_PATH;
+import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN_QUERY;
+import static dev.jakartalemon.cli.util.Constants.OPEN_API_TYPE;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
+import static dev.jakartalemon.cli.util.Constants.PATH_PARAM;
 import static dev.jakartalemon.cli.util.Constants.RESOURCES;
 import static dev.jakartalemon.cli.util.Constants.SLASH_CHAR;
 import static dev.jakartalemon.cli.util.OpenApiUtil.getType;
+import static io.swagger.models.Method.DELETE;
+import static io.swagger.models.Method.GET;
+import static io.swagger.models.Method.POST;
+import static io.swagger.models.Method.PUT;
 
 /**
  * @author Diego Silva mailto:diego.silva@apuntesdejava.com
@@ -89,7 +98,8 @@ public class RestAdapterHandler {
         openAPI.getComponents().getSchemas().forEach((schemaName, schema) -> {
             var type = getType(schema);
             var schemaDefinition = Json.createObjectBuilder();
-            Optional.ofNullable(schema.getProperties()).ifPresent(properties -> properties.forEach((propertyName, property) -> {
+            Optional.ofNullable(schema.getProperties())
+                .ifPresent(properties -> properties.forEach((propertyName, property) -> {
                 var propertyType = getType((Schema<?>) property);
                 schemaDefinition.add((String) propertyName, propertyType);
             }));
@@ -112,7 +122,7 @@ public class RestAdapterHandler {
             var endPos = StringUtils.indexOf(pathName, SLASH_CHAR, 1);
             var prefix = endPos >= 0 ? StringUtils.substring(pathName, 0, endPos) : pathName;
             List<ResourceDto> paths = pathsGroup.getOrDefault(prefix, new ArrayList<>());
-            paths.add( new ResourceDto(pathName,  pathItem));
+            paths.add(new ResourceDto(pathName, pathItem));
 
             pathsGroup.putIfAbsent(prefix, paths);
         });
@@ -129,7 +139,6 @@ public class RestAdapterHandler {
                     .addClassAnnotation("ApplicationPath(\"/api\")")
                     .setFileName(className)
                     .setModulePath(projectInfo.getString(APPLICATION))
-                    .setModule(APPLICATION)
                     .setFileName(className)
                     .setExtendClass("Application")
                     .setPackage(projectInfo.getString(PACKAGE), APPLICATION, RESOURCES);
@@ -149,9 +158,11 @@ public class RestAdapterHandler {
     private void createRestResourceBody(String pathName,
                                         List<ResourceDto> contents,
                                         JsonObject projectInfo) {
-        String className = StringUtils.capitalize(StringUtils.substringAfter(pathName, SLASH_CHAR)) + "Resource";
+        String className
+            = StringUtils.capitalize(StringUtils.substringAfter(pathName, SLASH_CHAR)) + "Resource";
         JavaFileBuilder javaFileBuilder = new JavaFileBuilder().setClassName(className).
             addImportClass("jakarta.ws.rs.Path").
+            addImportClass("io.reactivex.rxjava3.core.Flowable").
             addImportClass("jakarta.ws.rs.container.AsyncResponse").
             addImportClass("jakarta.ws.rs.container.Suspended").
             addImportClass("java.util.concurrent.ArrayBlockingQueue").
@@ -162,23 +173,25 @@ public class RestAdapterHandler {
         contents.forEach(dto -> {
             var pathItem = dto.pathItem();
             var parameters = pathItem.getParameters();
-            var resourceName = dto.pathName();
+            var subResourceName = StringUtils.substringAfter(dto.pathName(), pathName);
             Optional.ofNullable(pathItem.getGet()).
-                ifPresent(getOperation -> createMethod(getOperation, javaFileBuilder, "GET",
-                                                       parameters, resourceName));
+                ifPresent(getOperation -> createMethod(getOperation, javaFileBuilder, GET.name(),
+                parameters, subResourceName));
             Optional.ofNullable(pathItem.getPost()).
-                ifPresent(postOperation -> createMethod(postOperation, javaFileBuilder, "POST",
-                                                        parameters, resourceName));
+                ifPresent(postOperation -> createMethod(postOperation, javaFileBuilder, POST.name(),
+                parameters, subResourceName));
             Optional.ofNullable(pathItem.getDelete()).
-                ifPresent(deleteOperation -> createMethod(deleteOperation, javaFileBuilder, "DELETE",
-                                                          parameters, resourceName));
+                ifPresent(
+                    deleteOperation -> createMethod(deleteOperation, javaFileBuilder, DELETE.name(),
+                        parameters, subResourceName));
             Optional.ofNullable(pathItem.getPut()).
-                ifPresent(putOperation -> createMethod(putOperation, javaFileBuilder, "PUT",
-                                                       parameters, resourceName));
+                ifPresent(putOperation -> createMethod(putOperation, javaFileBuilder, PUT.name(),
+                parameters, subResourceName));
         });
+
         try {
-            javaFileBuilder.setModulePath(projectInfo.getString(APPLICATION)).setModule(APPLICATION).
-                setFileName(className).
+            javaFileBuilder.setModulePath(projectInfo.getString(APPLICATION))
+                .setFileName(className).
                 setPackage(projectInfo.getString(PACKAGE), APPLICATION, RESOURCES).build();
         } catch (IOException e) {
             log.error(e.getMessage(), e);
@@ -187,10 +200,11 @@ public class RestAdapterHandler {
 
     private void createMethod(Operation operation,
                               JavaFileBuilder javaFileBuilder,
-                              String method, List<Parameter> parameters, String pathName) {
+                              String method,
+                              List<Parameter> parameters,
+                              String resourceName) {
 
         String operationId = operation.getOperationId();
-
 
         List<String> annotations = new ArrayList<>();
         annotations.add(method);
@@ -200,7 +214,8 @@ public class RestAdapterHandler {
                 responses.forEach((key, response) -> {
                     Content content = response.getContent();
                     String annotation = StringUtils.join(content.keySet().stream().
-                        map(str -> ('"' + str + '"')).toList(), Constants.COMMA);
+                        map(str -> ('"' + str + '"')).toList(),
+                        Constants.COMMA);
                     annotations.add("Produces({%s})".formatted(annotation));
                 });
             });
@@ -209,27 +224,46 @@ public class RestAdapterHandler {
                 javaFileBuilder.addImportClass("jakarta.ws.rs.Consumes");
                 Optional.ofNullable(requestBody.getContent()).ifPresent(content -> {
                     String annotation = StringUtils.join(content.keySet().stream().
-                        map(str -> ('"' + str + '"')).toList(), Constants.COMMA);
+                        map(str -> ('"' + str + '"')).toList(),
+                        Constants.COMMA);
                     annotations.add("Consumes({%s})".formatted(annotation));
                 });
 
             });
-        javaFileBuilder.addMethod(operationId,
-            convertParamsToList(parameters), "void", null,
-            annotations).addImportClass("jakarta.ws.rs." + method);
+        var params = convertParamsToList(parameters, resourceName)
+            .add("asyncResponse", Json.createObjectBuilder(
+                Map.of(
+                    OPEN_API_TYPE, "AsyncResponse",
+                    ANNOTATION_FIELD, "Suspended"
+                )
+            ));
+
+        javaFileBuilder.addMethod(operationId, params.build(), "void", null, annotations)
+            .addImportClass("jakarta.ws.rs." + method);
     }
 
-    private List<Map.Entry<String, JsonValue>> convertParamsToList(List<Parameter> parameters) {
-        List<Map.Entry<String, JsonValue>> list = new ArrayList<>();
+    private JsonObjectBuilder convertParamsToList(List<Parameter> parameters,
+                                                  String resourceName) {
+        var params = Json.createObjectBuilder();
         Optional.ofNullable(parameters).
             ifPresent(parametersList -> parametersList.forEach(parameter -> {
             String entryName = parameter.getName();
-            String type = OpenApiUtil.getType(parameter.getSchema());
-            Map.Entry<String, JsonValue> item = new AbstractMap.SimpleImmutableEntry<>(entryName,
-                Json.createValue(type));
-            list.add(item);
+            String type
+                = OpenApiUtil.openApiType2JavaType(OpenApiUtil.getType(parameter.getSchema()));
+            var paramDetail = Json.createObjectBuilder(
+                Map.of(
+                    OPEN_API_TYPE, type,
+                    OPEN_API_IN,
+                    StringUtils.defaultIfEmpty(parameter.getIn(), OPEN_API_IN_QUERY)
+                )
+            );
+            if (StringUtils.equals(parameter.getIn(), OPEN_API_IN_PATH)) {
+                paramDetail.add(PATH_PARAM, resourceName);
+            }
+            params.add(entryName, paramDetail);
+
         }));
-        return list;
+        return params;
     }
 
     private static class RestAdapterHandlerHolder {

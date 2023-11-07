@@ -15,6 +15,7 @@
  */
 package dev.jakartalemon.cli.util;
 
+import jakarta.json.JsonObject;
 import jakarta.json.JsonString;
 import jakarta.json.JsonValue;
 import org.apache.commons.lang3.StringUtils;
@@ -29,8 +30,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static dev.jakartalemon.cli.util.Constants.ANNOTATION_FIELD;
 import static dev.jakartalemon.cli.util.Constants.COMMA_SPACE;
 import static dev.jakartalemon.cli.util.Constants.DEFINE_FIELD_PATTERN;
+import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN;
+import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN_PATH;
+import static dev.jakartalemon.cli.util.Constants.OPEN_API_TYPE;
+import static dev.jakartalemon.cli.util.Constants.PATH_PARAM;
 import static dev.jakartalemon.cli.util.Constants.PRIVATE_FINAL_VARIABLE_TEMPLATE;
 import static dev.jakartalemon.cli.util.Constants.PRIVATE_VARIABLE_STATIC_FINAL_TEMPLATE;
 import static dev.jakartalemon.cli.util.Constants.PRIVATE_VARIABLE_TEMPLATE;
@@ -54,7 +60,6 @@ public class JavaFileBuilder {
     private final Set<String[]> constructorsVariablesSet = new LinkedHashSet<>();
     private String className;
     private String modulePath;
-    private String module;
     private String resource;
     private String fileName;
     private String packageName;
@@ -69,9 +74,9 @@ public class JavaFileBuilder {
                                       String moduleName,
                                       String submoduleName) {
         this.packageName = Constants.PACKAGE_TEMPLATE.formatted(appPackage, moduleName,
-                                                                submoduleName);
+            submoduleName);
         this.packageValue = Constants.TEMPLATE_2_STRING_COMMA.formatted(Constants.PACKAGE,
-                                                                        packageName);
+            packageName);
         return this;
     }
 
@@ -106,7 +111,7 @@ public class JavaFileBuilder {
                                                   String variableAnnotation,
                                                   boolean isConstructor) {
         return addVariableDeclaration(variableType, variableName, variableAnnotation, isConstructor,
-                                      false, null);
+            false, null);
     }
 
     public JavaFileBuilder addVariableDeclaration(String variableType,
@@ -116,20 +121,20 @@ public class JavaFileBuilder {
                                                   boolean isFinal,
                                                   String variableInit) {
         Optional.ofNullable(variableAnnotation).ifPresent(annotation -> variablesList.add("%s@%s".
-                                                                                              formatted(
-                                                                                                  StringUtils.repeat(
-                                                                                                      SPACE,
-                                                                                                      TAB_SIZE),
-                                                                                                  annotation)));
+            formatted(
+                StringUtils.repeat(
+                    SPACE,
+                    TAB_SIZE),
+                annotation)));
         var declarations = TEMPLATE_2_STRING.formatted(variableType, variableName)
             + (StringUtils.isNotEmpty(variableInit) ? (" = " + variableInit) : EMPTY);
-        var variableDeclarationTemplate = isFinal ? PRIVATE_VARIABLE_STATIC_FINAL_TEMPLATE :
-            (isConstructor
-                ? PRIVATE_FINAL_VARIABLE_TEMPLATE
-                : PRIVATE_VARIABLE_TEMPLATE);
-        var variableDeclaration =
-            variableDeclarationTemplate.formatted(StringUtils.repeat(SPACE, TAB_SIZE),
-                                                  declarations);
+        var variableDeclarationTemplate = isFinal ? PRIVATE_VARIABLE_STATIC_FINAL_TEMPLATE
+                                      : (isConstructor
+                                         ? PRIVATE_FINAL_VARIABLE_TEMPLATE
+                                         : PRIVATE_VARIABLE_TEMPLATE);
+        var variableDeclaration
+            = variableDeclarationTemplate.formatted(StringUtils.repeat(SPACE, TAB_SIZE),
+                declarations);
 
         variablesList.add(variableDeclaration);
         if (isConstructor) {
@@ -144,12 +149,6 @@ public class JavaFileBuilder {
     public JavaFileBuilder setModulePath(String modulePath) {
 
         this.modulePath = modulePath;
-        return this;
-    }
-
-    public JavaFileBuilder setModule(String module) {
-
-        this.module = module;
         return this;
     }
 
@@ -190,39 +189,69 @@ public class JavaFileBuilder {
     }
 
     public JavaFileBuilder addMethod(String methodName,
-                                     List<Map.Entry<String, JsonValue>> params,
+                                     JsonObject params,
                                      String returnValue,
                                      String defaultReturnValue) {
         return addMethod(methodName, params, returnValue, defaultReturnValue, null);
 
     }
 
+    private String getType(JsonValue paramValue) {
+        if (paramValue.getValueType() == JsonValue.ValueType.STRING) {
+            return ((JsonString) paramValue).getString();
+        }
+        if (paramValue.getValueType() == JsonValue.ValueType.OBJECT) {
+            return paramValue.asJsonObject().getString(OPEN_API_TYPE);
+        }
+        return EMPTY;
+    }
+
     public JavaFileBuilder addMethod(String methodName,
-                                     List<Map.Entry<String, JsonValue>> params,
+                                     JsonObject params,
                                      String returnValue,
                                      String defaultReturnValue,
                                      List<String> annotations) {
-        var parameters = params.stream().map(param -> {
-            var paramType = ((JsonString) param.getValue()).getString();
+
+        var parameters = params.entrySet().stream().map(param -> {
+            var paramType = getType(param.getValue());
             if (importablesMap.containsKey(paramType)) {
                 addImportClass(paramType);
+            }
+            if (param.getValue().getValueType() == JsonValue.ValueType.OBJECT) {
+                var detailParam = param.getValue().asJsonObject();
+                if (detailParam.containsKey(OPEN_API_IN)) {
+                    var inParam = detailParam.getString(OPEN_API_IN);
+                    if (inParam.equals(OPEN_API_IN_PATH)) {
+                        annotations.add(
+                            "Path(\"%s\")".formatted(detailParam.getString(PATH_PARAM)));
+                        addImportClass("jakarta.ws.rs.PathParam");
+                        var paramDeclaration
+                            = "@PathParam(\"%s\") %s".formatted(param.getKey(), paramType);
+                        return TEMPLATE_2_STRING.formatted(paramDeclaration, param.getKey());
+                    }
+                }
+                if (detailParam.containsKey(ANNOTATION_FIELD)) {
+                    var paramDeclaration
+                        = "@%s %s".formatted(detailParam.getString(ANNOTATION_FIELD), paramType);
+                    return TEMPLATE_2_STRING.formatted(paramDeclaration, param.getKey());
+                }
             }
             return TEMPLATE_2_STRING.formatted(paramType, param.getKey());
 
         }).collect(Collectors.joining(COMMA_SPACE));
         Optional.ofNullable(annotations).ifPresent(annotationsList -> {
             methodsList.add(String.join(System.lineSeparator(),
-                                        annotationsList.stream()
-                                            .map(annotation -> "%s@%s".formatted(StringUtils.repeat(
-                                                SPACE, TAB_SIZE), annotation)).toList()));
+                annotationsList.stream()
+                    .map(annotation -> "%s@%s".formatted(StringUtils.repeat(
+                    SPACE, TAB_SIZE), annotation)).toList()));
         });
         var methodSignature = "%s%s %s %s (%s) {".formatted(StringUtils.repeat(
             SPACE, TAB_SIZE), PUBLIC, returnValue, methodName, parameters);
         methodsList.add(methodSignature);
         if (defaultReturnValue != null) {
             methodsList.add(DEFINE_FIELD_PATTERN.
-                                formatted(StringUtils.repeat(SPACE, TAB_SIZE * 2),
-                                          RETURN, defaultReturnValue));
+                formatted(StringUtils.repeat(SPACE, TAB_SIZE * 2),
+                    RETURN, defaultReturnValue));
         }
         methodsList.add("%s}".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
         return this;
@@ -233,11 +262,11 @@ public class JavaFileBuilder {
         var constructorParameters = constructorsVariablesSet.stream().map(
             variable -> variable[0] + SPACE + variable[1]).collect(Collectors.joining(COMMA_SPACE));
         lines.add("%s%s %s (%s){".formatted(StringUtils.repeat(SPACE, TAB_SIZE), PUBLIC, className,
-                                            constructorParameters));
+            constructorParameters));
         constructorsVariablesSet.forEach(variable
-                                             -> lines.add(
-            "%sthis.%2$s = %2$s;".formatted(StringUtils.repeat(
-                SPACE, TAB_SIZE * 2), variable[1])));
+            -> lines.add(
+                "%sthis.%2$s = %2$s;".formatted(StringUtils.repeat(
+                    SPACE, TAB_SIZE * 2), variable[1])));
         lines.add("%s}".formatted(StringUtils.repeat(
             SPACE, TAB_SIZE)));
         return lines;

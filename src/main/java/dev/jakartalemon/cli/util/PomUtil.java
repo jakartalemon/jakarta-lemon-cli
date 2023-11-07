@@ -234,7 +234,8 @@ public class PomUtil {
                             NODESET);
                         if (nodeList.getLength() == 0) {
                             DocumentXmlUtil.createElement(documentXml, "/project/properties", field)
-                                .ifPresent(element -> element.setTextContent(((JsonString) value).getString()));
+                                .ifPresent(element -> element.setTextContent(((JsonString) value).
+                                getString()));
                         }
                     } catch (XPathExpressionException ex) {
                         log.error(ex.getMessage(), ex);

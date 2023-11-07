@@ -47,13 +47,13 @@ import picocli.CommandLine.HelpCommand;
         AddUseCaseCommand.class,
         AddEntityCommand.class,
         AddRestAdapterCommand.class,
-        SetServerCommand.class,
-    }
+        SetServerCommand.class,}
 )
 public class JakartaLemonCli implements Callable<Integer> {
 
     /**
      * Main method that delegates execution to subcommands
+     *
      * @return 0
      * @throws Exception If corrus
      */
@@ -65,6 +65,7 @@ public class JakartaLemonCli implements Callable<Integer> {
 
     /**
      * Application main method
+     *
      * @param args main args
      */
     public static void main(String... args) {
