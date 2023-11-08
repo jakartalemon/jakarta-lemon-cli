@@ -74,8 +74,8 @@ public class Constants {
     public static final String STRING_TYPE = "String";
     public static final String INTEGER_TYPE = "Integer";
     public static final String BOOLEAN_TYPE = "Boolean";
-    public static final String COLUMN_ANOTATION = "Column";
-    public static final String JOIN_COLUMN_ANOTATION = "JoinColumn";
+    public static final String COLUMN_ANNOTATION = "Column";
+    public static final String JOIN_COLUMN_ANNOTATION = "JoinColumn";
     public static final String ANNOTATION_PROPS = "annotations-props";
     public static final char SLASH = '/';
     public static final String JAKARTA_LEMON_HOST_BASE = "https://jakartalemon.dev";
@@ -167,6 +167,7 @@ public class Constants {
     public static final String PROJECT_LOMBOK_VERSION_KEY = "org.projectlombok.version";
 
     public static final char SLASH_CHAR = '/';
+    public static final char DOUBLE_QUOTES_CHAR = '"';
     public static final String PATH_PARAM = "path";
     public static final String CONFIGURATION = "configuration";
     //VERSION DEFAULT

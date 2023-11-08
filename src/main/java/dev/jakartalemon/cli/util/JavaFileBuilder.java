@@ -192,7 +192,7 @@ public class JavaFileBuilder {
                                      JsonObject params,
                                      String returnValue,
                                      String defaultReturnValue) {
-        return addMethod(methodName, params, returnValue, defaultReturnValue, null);
+        return addMethod(methodName, params, returnValue, defaultReturnValue, null, null);
 
     }
 
@@ -210,7 +210,8 @@ public class JavaFileBuilder {
                                      JsonObject params,
                                      String returnValue,
                                      String defaultReturnValue,
-                                     List<String> annotations) {
+                                     List<String> annotations,
+                                     String body) {
 
         var parameters = params.entrySet().stream().map(param -> {
             var paramType = getType(param.getValue());
@@ -248,6 +249,9 @@ public class JavaFileBuilder {
         var methodSignature = "%s%s %s %s (%s) {".formatted(StringUtils.repeat(
             SPACE, TAB_SIZE), PUBLIC, returnValue, methodName, parameters);
         methodsList.add(methodSignature);
+        if (StringUtils.isNotBlank(body)) {
+            methodsList.add("%s%s".formatted(StringUtils.repeat(SPACE, TAB_SIZE * 2), body));
+        }
         if (defaultReturnValue != null) {
             methodsList.add(DEFINE_FIELD_PATTERN.
                 formatted(StringUtils.repeat(SPACE, TAB_SIZE * 2),

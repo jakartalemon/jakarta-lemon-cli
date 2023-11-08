@@ -48,6 +48,7 @@ public class AddRestAdapterCommand implements Runnable {
         var restAdapterHandler = RestAdapterHandler.getInstance();
         restAdapterHandler.loadOpenApiDefinition(file);
         JsonFileUtil.getProjectInfo().ifPresent(projectInfo -> {
+            restAdapterHandler.setModelPackage(projectInfo);
             restAdapterHandler.createComponents(
                 definitions -> appModuleHandler.createRecords(definitions, projectInfo));
             restAdapterHandler.createPaths(

@@ -42,6 +42,8 @@ import java.util.function.Consumer;
 
 import static dev.jakartalemon.cli.util.Constants.ANNOTATION_FIELD;
 import static dev.jakartalemon.cli.util.Constants.APPLICATION;
+import static dev.jakartalemon.cli.util.Constants.DOUBLE_QUOTES_CHAR;
+import static dev.jakartalemon.cli.util.Constants.MODEL;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN_PATH;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN_QUERY;
@@ -65,6 +67,8 @@ public class RestAdapterHandler {
     private JsonObject schemas;
     private OpenAPI openAPI;
     private Map<String, List<ResourceDto>> pathsGroup;
+
+    private String modelPackage;
 
     private RestAdapterHandler() {
     }
@@ -96,7 +100,6 @@ public class RestAdapterHandler {
     private void loadComponentsDefinitions() {
         var jsonBuilder = Json.createObjectBuilder();
         openAPI.getComponents().getSchemas().forEach((schemaName, schema) -> {
-            var type = getType(schema);
             var schemaDefinition = Json.createObjectBuilder();
             Optional.ofNullable(schema.getProperties())
                 .ifPresent(properties -> properties.forEach((propertyName, property) -> {
@@ -165,10 +168,7 @@ public class RestAdapterHandler {
             addImportClass("io.reactivex.rxjava3.core.Flowable").
             addImportClass("jakarta.ws.rs.container.AsyncResponse").
             addImportClass("jakarta.ws.rs.container.Suspended").
-            addImportClass("java.util.concurrent.ArrayBlockingQueue").
-            addImportClass("java.util.concurrent.BlockingQueue").
-            addVariableDeclaration("BlockingQueue<AsyncResponse>", "SUSPENDED", null, false, true,
-                "new ArrayBlockingQueue<>(5)").
+
             addClassAnnotation("Path(\"%s\")".formatted(pathName));
         contents.forEach(dto -> {
             var pathItem = dto.pathItem();
@@ -214,7 +214,7 @@ public class RestAdapterHandler {
                 responses.forEach((key, response) -> {
                     Content content = response.getContent();
                     String annotation = StringUtils.join(content.keySet().stream().
-                        map(str -> ('"' + str + '"')).toList(),
+                        map(str -> (DOUBLE_QUOTES_CHAR + str + DOUBLE_QUOTES_CHAR)).toList(),
                         Constants.COMMA);
                     annotations.add("Produces({%s})".formatted(annotation));
                 });
@@ -237,8 +237,26 @@ public class RestAdapterHandler {
                     ANNOTATION_FIELD, "Suspended"
                 )
             ));
-
-        javaFileBuilder.addMethod(operationId, params.build(), "void", null, annotations)
+        var body = new StringBuilder();
+        Optional.ofNullable(operation.getResponses()).ifPresent(responses -> {
+            responses.forEach((key, response) -> {
+                if (response.getContent() != null) {
+                    var content = response.getContent();
+                    content.values().forEach(mediaType -> {
+                        if (mediaType.getSchema() != null && mediaType.getSchema().get$ref() != null) {
+                            var ref = mediaType.getSchema().get$ref();
+                            var schemaName = StringUtils.substringAfterLast(ref, SLASH_CHAR);
+                            javaFileBuilder.addImportClass(modelPackage +'.'+ schemaName);
+                            var schemaFields = schemas.get(schemaName);
+                            body.append("Flowable.just(new %s())".formatted(schemaName));
+                            body.append(".subscribe(asyncResponse::resume);");
+                        }
+                    });
+                }
+            });
+        });
+        javaFileBuilder.addMethod(operationId, params.build(), "void", null, annotations, body.
+            toString())
             .addImportClass("jakarta.ws.rs." + method);
     }
 
@@ -264,6 +282,12 @@ public class RestAdapterHandler {
 
         }));
         return params;
+    }
+
+    public void setModelPackage(JsonObject projectInfo) {
+        modelPackage = Constants.PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE),
+                                                            APPLICATION, MODEL);
+
     }
 
     private static class RestAdapterHandlerHolder {
