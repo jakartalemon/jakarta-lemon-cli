@@ -54,41 +54,40 @@ public class HttpClientUtil {
      * It makes a GET HTTP call and the response processes it as JSON. The way it returns it is done
      * through the read parameter.
      *
-     * @param <T>  Data type to be returned after processing the response.
-     * @param uri  Request URI
+     * @param <T> Data type to be returned after processing the response.
+     * @param uri Request URI
      * @param read Function that processes the request and returns a value based on the indicated
-     *             type. This function must have a parameter of type {@link JsonReader}, and can
-     *             return any data
-     *             type.
+     * type. This function must have a parameter of type {@link JsonReader}, and can return any data
+     * type.
      * @return Processed object of the request
-     * @throws IOException          IOException
+     * @throws IOException IOException
      * @throws InterruptedException InterruptedException
-     * @throws URISyntaxException   URISyntaxException
+     * @throws URISyntaxException URISyntaxException
      */
     public static <T> T getJson(String uri,
-        Function<JsonReader, T> read) throws IOException,
-                                             InterruptedException,
-                                             URISyntaxException {
+                                Function<JsonReader, T> read) throws IOException,
+                                                                     InterruptedException,
+                                                                     URISyntaxException {
         log.debug("getting uri:{}", uri);
         var httpRequest = HttpRequest.newBuilder(new URI(uri)).GET().build();
-        var httpResponse =
-            HttpClient.newBuilder().build().send(httpRequest, HttpResponse.BodyHandlers.
+        var httpResponse
+            = HttpClient.newBuilder().build().send(httpRequest, HttpResponse.BodyHandlers.
                 ofString());
         log.debug("code:{}", httpResponse.statusCode());
         var json = httpResponse.body();
 
         log.debug("resp:{}", json);
         try (var stringReader = new StringReader(json); var jsonReader = Json.createReader(
-            stringReader)) {
+             stringReader)) {
             return read.apply(jsonReader);
         }
     }
 
-    public static Map<String, String> getConfigs(String configName){
+    public static Map<String, String> getConfigs(String configName) {
         if (cliConfig == null) {
             try {
-                cliConfig =
-                    HttpClientUtil.getJson(JAKARTA_LEMON_CONFIG_URL, JsonReader::readObject);
+                cliConfig
+                    = HttpClientUtil.getJson(JAKARTA_LEMON_CONFIG_URL, JsonReader::readObject);
 
             } catch (IOException | URISyntaxException | InterruptedException ex) {
                 log.error(ex.getMessage(), ex);
@@ -104,18 +103,20 @@ public class HttpClientUtil {
         return importablesMap;
     }
 
-    public static Optional<JsonObject> getDatabasesConfigs()  {
+    public static Optional<JsonObject> getDatabasesConfigs() {
         if (cliConfig == null) {
             try {
-                cliConfig =
-                    HttpClientUtil.getJson(JAKARTA_LEMON_CONFIG_URL, JsonReader::readObject);
+                cliConfig
+                    = HttpClientUtil.getJson(JAKARTA_LEMON_CONFIG_URL, JsonReader::readObject);
 
-            } catch (IOException | URISyntaxException |InterruptedException ex) {
+            } catch (IOException | URISyntaxException | InterruptedException ex) {
                 log.error(ex.getMessage(), ex);
 
             }
         }
-        if (cliConfig == null) return Optional.empty();
+        if (cliConfig == null) {
+            return Optional.empty();
+        }
         return Optional.ofNullable(cliConfig.getJsonObject(DATABASES));
     }
 }

@@ -34,10 +34,8 @@ import java.util.Optional;
 import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
 import static dev.jakartalemon.cli.util.Constants.DEPENDENCY;
 import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
-import static dev.jakartalemon.cli.util.Constants.JAVA;
-import static dev.jakartalemon.cli.util.Constants.MAIN;
-import static dev.jakartalemon.cli.util.Constants.SRC;
-import static dev.jakartalemon.cli.util.Constants.TEST;
+import static dev.jakartalemon.cli.util.Constants.PLUGIN;
+import static dev.jakartalemon.cli.util.Constants.POM_XML;
 import static dev.jakartalemon.cli.util.Constants.VERSION;
 import static javax.xml.xpath.XPathConstants.NODESET;
 
@@ -56,20 +54,21 @@ public class PomUtil {
 
     /**
      * @param modulePath the value of modulePath
-     * @param pomModel   POM Model
+     * @param pomModel POM Model
      * @return
      */
-    public Optional<Path> createPom(Path modulePath, PomModel pomModel) {
+    public Optional<Path> createPom(Path modulePath,
+                                    PomModel pomModel) {
         try {
             Files.createDirectories(modulePath);
-            var pomPath = modulePath.resolve("pom.xml");
+            var pomPath = modulePath.resolve(POM_XML);
             var pomXml = DocumentXmlUtil.newDocument();
             var projectElemBuilder = ElementBuilder.newInstance("project")
                 .addAttribute("xmlns", "http://maven.apache.org/POM/4.0.0")
                 .addAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
                 .addAttribute("xsi:schemaLocation",
-                    "http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0" +
-                        ".xsd");
+                    "http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0"
+                    + ".xsd");
             Optional.ofNullable(pomModel.getModelVersion()).ifPresent(
                 modelVersion -> projectElemBuilder.addChild(
                     ElementBuilder.newInstance("modelVersion").setTextContent(modelVersion)));
@@ -88,7 +87,7 @@ public class PomUtil {
                 version -> projectElemBuilder.addChild(
                     ElementBuilder.newInstance(VERSION).setTextContent(version)));
             projectElemBuilder.addChild(
-                    ElementBuilder.newInstance(ARTIFACT_ID).setTextContent(pomModel.getArtifactId()))
+                ElementBuilder.newInstance(ARTIFACT_ID).setTextContent(pomModel.getArtifactId()))
                 .addChild(ElementBuilder.newInstance("packaging")
                     .setTextContent(pomModel.getPackaging()));
             //creando modules
@@ -146,52 +145,60 @@ public class PomUtil {
 
     }
 
-    private void insertValues(JsonObject jsonValues, ElementBuilder elementBuilder) {
+    private void insertValues(JsonObject jsonValues,
+                              ElementBuilder elementBuilder) {
 
         var entrySet = jsonValues.entrySet();
         entrySet.forEach(entry -> {
             var element = ElementBuilder.newInstance(entry.getKey());
             elementBuilder.addChild(element);
-            if (entry.getValue().getValueType() == JsonValue.ValueType.STRING)
+            if (entry.getValue().getValueType() == JsonValue.ValueType.STRING) {
                 element.setTextContent(jsonValues.getString(entry.getKey()));
-            else if (entry.getValue().getValueType() == JsonValue.ValueType.OBJECT) {
+            } else if (entry.getValue().getValueType() == JsonValue.ValueType.OBJECT) {
                 insertValues(jsonValues.getJsonObject(entry.getKey()), element);
 
             }
         });
     }
 
-    public void createJavaProjectStructure(Path sourcePath, String... packagesName) {
-        try {
-            var created =
-                Files.createDirectories(sourcePath.resolve(SRC).resolve(MAIN).resolve(JAVA));
-            Files.createDirectories(sourcePath.resolve(SRC).resolve(MAIN).resolve("resources"));
-            Files.createDirectories(sourcePath.resolve(SRC).resolve(TEST).resolve(JAVA));
-            Files.createDirectories(sourcePath.resolve(SRC).resolve(TEST).resolve("resources"));
-            for (var packageName : packagesName) {
-                var packagesDir = packageName.split("\\.");
-                var packagePath = created;
-                for (var packageDir : packagesDir) {
-                    packagePath = packagePath.resolve(packageDir);
+    public void addPlugin(JsonObject plugin,
+                          String... paths) {
+        var pathXml = Path.of(".", paths).resolve(POM_XML);
+        DocumentXmlUtil.openDocument(pathXml)
+            .ifPresent(documentXml -> {
+                try {
+                    var xPath = XPathFactory.newInstance().newXPath();
+                    var artifactId = plugin.getString("artifactId");
+                    var dependencyExp
+                        = "/project/build/plugins/plugin/artifactId[text()='%s']".formatted(
+                            artifactId);
+                    var nodeList = (NodeList) xPath.compile(dependencyExp).evaluate(documentXml,
+                        NODESET);
+                    if (nodeList.getLength() == 0) {
+                        DocumentXmlUtil.createElement(documentXml, "/project/build/plugins", PLUGIN).
+                            ifPresent(pluginElement -> {
+                                DocumentXmlUtil.createElementWithContent(documentXml, pluginElement,
+                                    plugin);
+                            });
+                        DocumentXmlUtil.saveDocument(pathXml, documentXml);
+                    }
+                } catch (XPathExpressionException ex) {
+                    log.error(ex.getMessage(), ex);
                 }
-                Files.createDirectories(packagePath);
-            }
-        } catch (IOException ex) {
-            log.error(ex.getMessage(), ex);
-        }
-
+            });
     }
 
-    public void addDependency(JsonObject dependency, String... paths) {
-        var pathXml = Path.of(".", paths).resolve("pom.xml");
+    public void addDependency(JsonObject dependency,
+                              String... paths) {
+        var pathXml = Path.of(".", paths).resolve(POM_XML);
 
         DocumentXmlUtil.openDocument(pathXml)
             .ifPresent(documentXml -> {
                 try {
                     var xPath = XPathFactory.newInstance().newXPath();
                     var artifactId = dependency.getString("artifactId");
-                    var dependencyExp =
-                        "/project/dependencies/dependency/artifactId[text()='%s']".formatted(
+                    var dependencyExp
+                        = "/project/dependencies/dependency/artifactId[text()='%s']".formatted(
                             artifactId);
 
                     var nodeList = (NodeList) xPath.compile(dependencyExp).evaluate(documentXml,
@@ -201,9 +208,9 @@ public class PomUtil {
                         DocumentXmlUtil.createElement(documentXml, "/project/dependencies",
                             DEPENDENCY).ifPresent(dependencyElem -> dependency.forEach(
                             (key, value) -> DocumentXmlUtil.createElement(documentXml,
-                                    dependencyElem, key)
+                                dependencyElem, key)
                                 .ifPresent(elem -> elem.setTextContent(
-                                    ((JsonString) value).getString()))));
+                                ((JsonString) value).getString()))));
                         DocumentXmlUtil.saveDocument(pathXml, documentXml);
                     }
                 } catch (XPathExpressionException e) {
@@ -211,6 +218,32 @@ public class PomUtil {
                 }
             });
 
+    }
+
+    public PomUtil addProperty(JsonObject property,
+                               String... paths) {
+        var pathXml = Path.of(".", paths).resolve(POM_XML);
+
+        DocumentXmlUtil.openDocument(pathXml)
+            .ifPresent(documentXml -> {
+                property.forEach((field, value) -> {
+                    try {
+                        var xPath = XPathFactory.newInstance().newXPath();
+                        var propertyExp = "/project/properties/%s".formatted(field);
+                        var nodeList = (NodeList) xPath.compile(propertyExp).evaluate(documentXml,
+                            NODESET);
+                        if (nodeList.getLength() == 0) {
+                            DocumentXmlUtil.createElement(documentXml, "/project/properties", field)
+                                .ifPresent(element -> element.setTextContent(((JsonString) value).
+                                getString()));
+                        }
+                    } catch (XPathExpressionException ex) {
+                        log.error(ex.getMessage(), ex);
+                    }
+                });
+                DocumentXmlUtil.saveDocument(pathXml, documentXml);
+            });
+        return this;
     }
 
     private static class PomUtilHolder {

@@ -18,13 +18,13 @@ package dev.jakartalemon.cli.project.hexa.handler;
 import static dev.jakartalemon.cli.util.Constants.ADAPTERS;
 import static dev.jakartalemon.cli.util.Constants.ANNOTATION_PROPS;
 import static dev.jakartalemon.cli.util.Constants.BOOLEAN_TYPE;
-import static dev.jakartalemon.cli.util.Constants.COLUMN_ANOTATION;
+import static dev.jakartalemon.cli.util.Constants.COLUMN_ANNOTATION;
 import static dev.jakartalemon.cli.util.Constants.ENTITIES;
 import static dev.jakartalemon.cli.util.Constants.FIELDS;
 import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
 import static dev.jakartalemon.cli.util.Constants.INTEGER_TYPE;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_LEMON_CONFIG_URL;
-import static dev.jakartalemon.cli.util.Constants.JOIN_COLUMN_ANOTATION;
+import static dev.jakartalemon.cli.util.Constants.JOIN_COLUMN_ANNOTATION;
 import static dev.jakartalemon.cli.util.Constants.MAIN;
 import static dev.jakartalemon.cli.util.Constants.MANY_TO_ONE;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_PERSISTENCE_API;
@@ -79,7 +79,7 @@ public class JpaPersistenceHandler {
     private static final String IMPORT_ONE_TO_ONE = "import jakarta.persistence.OneToOne;";
     private static final String PERSISTENCE_FILE_NAME = "persistence.xml";
     private static final String PERSISTENCE = "persistence";
-    private static String[][] ASSOCIATIONS_DESCRIPTIONS = {
+    private static final String[][] ASSOCIATIONS_DESCRIPTIONS = {
         {MANY_TO_ONE, IMPORT_MANY_TO_ONE},
         {ONE_TO_ONE, IMPORT_ONE_TO_ONE}
     };
@@ -112,14 +112,14 @@ public class JpaPersistenceHandler {
     private boolean checkAssociation(List<String> lines,
                                      JsonObject definitionValue) {
         for (var descriptionsRow : ASSOCIATIONS_DESCRIPTIONS) {
-            var anotation = descriptionsRow[0];
-            if (definitionValue.containsKey(anotation)) {
+            var annotation = descriptionsRow[0];
+            if (definitionValue.containsKey(annotation)) {
                 var importDeclaration = descriptionsRow[1];
                 if (!lines.contains(importDeclaration)) {
                     lines.add(2, importDeclaration);
                 }
                 lines.add("%s@%s".formatted(StringUtils.repeat(SPACE, TAB_SIZE), StringUtils.
-                    capitalize(anotation)));
+                    capitalize(annotation)));
                 return true;
             }
         }
@@ -155,11 +155,11 @@ public class JpaPersistenceHandler {
                 }
                 var hasAssociation = checkAssociation(lines, definitionValue);
                 if (hasAssociation) {
-                    checkColumnDefinition(lines, definitionValue, JOIN_COLUMN_ANOTATION,
-                        joinColumnAnnotationProperties);
+                    checkColumnDefinition(lines, definitionValue, JOIN_COLUMN_ANNOTATION,
+                                          joinColumnAnnotationProperties);
                 } else {
-                    checkColumnDefinition(lines, definitionValue, COLUMN_ANOTATION,
-                        columnAnnotationProperties);
+                    checkColumnDefinition(lines, definitionValue, COLUMN_ANNOTATION,
+                                          columnAnnotationProperties);
                 }
                 lines.add("%sprivate %s %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE), type,
                     fieldName));
@@ -224,9 +224,9 @@ public class JpaPersistenceHandler {
         JsonObject definitions = HttpClientUtil.getJson(JAKARTA_LEMON_CONFIG_URL,
             JsonReader::readObject);
         this.columnAnnotationProperties = definitions.getJsonObject(ANNOTATION_PROPS).getJsonObject(
-            COLUMN_ANOTATION);
+            COLUMN_ANNOTATION);
         this.joinColumnAnnotationProperties = definitions.getJsonObject(ANNOTATION_PROPS).
-            getJsonObject(JOIN_COLUMN_ANOTATION);
+            getJsonObject(JOIN_COLUMN_ANNOTATION);
     }
 
     private void createPersistenceXml() {

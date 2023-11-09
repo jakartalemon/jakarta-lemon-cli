@@ -23,6 +23,7 @@ import org.apache.commons.lang3.StringUtils;
 import picocli.CommandLine;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -115,7 +116,7 @@ public class CreateProjectCommand implements Runnable {
                 case REST -> {
                 }
             }
-        } catch (IOException ex) {
+        } catch (IOException | URISyntaxException | InterruptedException ex) {
             log.error(ex.getMessage(), ex);
         }
     }

@@ -61,7 +61,8 @@ public class AddEntityCommand implements Callable<Integer> {
                 .forEach(item -> item.forEach(
                 (key, classDef) -> jpaPersistenceHandler.createEntityClass(projectInfo, key,
                     classDef.asJsonObject())));
-                jpaPersistenceHandler.createPersistenceUnit(infrastructureModuleHandler.getDataSourceName());
+            jpaPersistenceHandler.createPersistenceUnit(infrastructureModuleHandler.
+                getDataSourceName());
             jpaPersistenceHandler.savePersistenceXml();
             return 0;
         }).orElse(1)).orElse(2);

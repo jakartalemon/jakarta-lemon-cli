@@ -19,11 +19,14 @@ import dev.jakartalemon.cli.project.hexa.handler.ApplicationModuleHandler;
 import dev.jakartalemon.cli.project.hexa.handler.DomainModuleHandler;
 import dev.jakartalemon.cli.project.hexa.handler.InfrastructureModuleHandler;
 import dev.jakartalemon.cli.model.PomModel;
+import dev.jakartalemon.cli.util.DependenciesUtil;
 import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -35,12 +38,17 @@ import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
 import static dev.jakartalemon.cli.util.Constants.DOMAIN;
 import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
 import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
-import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANOTATION_API_VERSION_KEY;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANNOTATION_API_VERSION_KEY;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_CDI_API_VERSION_KEY;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_SERVLET_VERSION_KEY;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_WS_RS_API_VERSION_KEY;
 import static dev.jakartalemon.cli.util.Constants.JAVA_VERSION;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_RELEASE;
+import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_LOMBOK;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 import static dev.jakartalemon.cli.util.Constants.POM;
+import static dev.jakartalemon.cli.util.Constants.PROJECT_LOMBOK_VERSION_KEY;
+import static dev.jakartalemon.cli.util.Constants.VERSION;
 
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
@@ -60,10 +68,15 @@ public class CreateHexagonalProject {
         private static final CreateHexagonalProject INSTANCE = new CreateHexagonalProject();
     }
 
-    public Optional<JsonObject> createProject(Path projectPath,
-                                              String groupId,
-                                              String artifactId,
-                                              String packageName) {
+    public static Optional<JsonObject> createProject(Path projectPath,
+                                                     String groupId,
+                                                     String artifactId,
+                                                     String packageName)
+        throws IOException, URISyntaxException, InterruptedException {
+
+        var lombokVersion = DependenciesUtil.getLastVersionDependency(MAVEN_QUERY_LOMBOK)
+            .map(lombokDependency -> lombokDependency.getString(VERSION)).orElse("1.18.30");
+
         var version = "1.0-SNAPSHOT";
         var projectPom = PomModel.builder().groupId(groupId).artifactId(artifactId).version(version)
             .packaging(POM)
@@ -72,17 +85,22 @@ public class CreateHexagonalProject {
                 "project.build.sourceEncoding", "UTF-8",
                 MAVEN_COMPILER_RELEASE, JAVA_VERSION,
                 "mockito.junit.jupiter.version", "5.4.0",
-                "org.projectlombok.version", "1.18.28",
                 "org.mapstruct.version", "1.5.5.Final",
                 JAKARTA_CDI_API_VERSION_KEY, "4.0.1",
-                JAKARTA_ANOTATION_API_VERSION_KEY, "2.1.0"
+                JAKARTA_ANNOTATION_API_VERSION_KEY, "2.1.0",
+                JAKARTA_WS_RS_API_VERSION_KEY, "3.1.0",
+                JAKARTA_SERVLET_VERSION_KEY, "6.0.0",
+                PROJECT_LOMBOK_VERSION_KEY, lombokVersion
             ));
         PomUtil.getInstance().createPom(projectPath, projectPom.build());
 
         var domainPath = DomainModuleHandler.getInstance().createDomainModule(projectPath, groupId,
-            artifactId, version, packageName);
+            artifactId, version,
+            packageName);
         var appPath = ApplicationModuleHandler.getInstance().createApplicationModule(projectPath,
-            groupId, artifactId, version, packageName);
+            groupId,
+            artifactId,
+            version);
 
         var infraPath = InfrastructureModuleHandler.getInstance().
             createInfrastructureModule(projectPath,

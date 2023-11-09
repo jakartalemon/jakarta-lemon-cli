@@ -18,8 +18,10 @@ package dev.jakartalemon.cli.project.hexa.handler;
 import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.project.hexa.AddModelCommand;
 import dev.jakartalemon.cli.util.Constants;
+import dev.jakartalemon.cli.util.FileClassUtil;
 import dev.jakartalemon.cli.util.HttpClientUtil;
 import dev.jakartalemon.cli.util.PomUtil;
+import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -34,15 +36,20 @@ import java.util.stream.Collectors;
 
 import jakarta.json.JsonString;
 import jakarta.json.JsonValue;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 import static dev.jakartalemon.cli.util.Constants.*;
+
 import dev.jakartalemon.cli.util.JavaFileBuilder;
+
 import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.nio.file.Files;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
+
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
 
@@ -74,7 +81,7 @@ public class DomainModuleHandler {
                 javaFileBuilder);
             CLASSES_IMPORT_TEST.forEach(javaFileBuilder::addImportClass);
             var classTestName = "%sTest".formatted(className);
-            javaFileBuilder.addClassAnnotation("@ExtendWith(MockitoExtension.class)");
+            javaFileBuilder.addClassAnnotation("ExtendWith(MockitoExtension.class)");
             javaFileBuilder.setClassName(classTestName);
 
             classesInject.forEach(classInject -> {
@@ -85,7 +92,6 @@ public class DomainModuleHandler {
             var classNameInstance = StringUtils.uncapitalize(className);
             javaFileBuilder.addVariableDeclaration(className, classNameInstance, "InjectMocks")
                 .setModulePath(projectInfo.getString(DOMAIN))
-                .setModule(DOMAIN)
                 .setFileName(classTestName)
                 .setResource(TEST)
                 .build();
@@ -94,11 +100,11 @@ public class DomainModuleHandler {
         }
     }
 
-    public Optional<Path> createDomainModule(Path projectPath,
-                                             String groupId,
-                                             String artifactId,
-                                             String version,
-                                             String packageName) {
+    public static Optional<Path> createDomainModule(Path projectPath,
+                                                    String groupId,
+                                                    String artifactId,
+                                                    String version,
+                                                    String packageName) {
 
         var modulePom = PomModel.builder().parent(Map.of(
             GROUP_ID, groupId,
@@ -116,14 +122,15 @@ public class DomainModuleHandler {
         pomPath.ifPresent(pom -> {
             log.debug("domain created at {}", pom);
             var parent = pom.getParent();
-            PomUtil.getInstance().createJavaProjectStructure(parent, PACKAGE_TEMPLATE.formatted(
+            FileClassUtil.createJavaProjectStructure(parent, PACKAGE_TEMPLATE.formatted(
                 packageName, DOMAIN, REPOSITORY));
-            PomUtil.getInstance()
+            FileClassUtil
                 .createJavaProjectStructure(parent,
                     PACKAGE_TEMPLATE.formatted(packageName, DOMAIN, MODEL));
-            PomUtil.getInstance().
+            FileClassUtil.
                 createJavaProjectStructure(parent,
-                    PACKAGE_TEMPLATE.formatted(packageName, DOMAIN, USECASE));
+                    PACKAGE_TEMPLATE.formatted(packageName, DOMAIN,
+                        USECASE));
         });
         return pomPath;
     }
@@ -177,14 +184,16 @@ public class DomainModuleHandler {
                     defaultReturnValue = returns[1];
                 }
                 var parameters = method.entrySet().stream()
-                    .filter(entry -> !entry.getKey().equals(RETURN)).toList();
+                    .filter(entry -> !entry.getKey().equals(RETURN))
+                    .collect(Json::createObjectBuilder,
+                        (accumulator, item) -> accumulator.add(item.getKey(), item.getValue()),
+                        (accumulator, item) -> accumulator.add("last", item)).build();
                 javaFileBuilder.addMethod(methodName, parameters, returnValue, defaultReturnValue);
 
             });
 
             javaFileBuilder
                 .setModulePath(projectInfo.getString(DOMAIN))
-                .setModule(DOMAIN)
                 .setFileName(className)
                 .build();
         } catch (IOException ex) {
@@ -264,7 +273,6 @@ public class DomainModuleHandler {
             });
             javaFileBuilder
                 .setModulePath(projectInfo.getString(DOMAIN))
-                .setModule(DOMAIN)
                 .setFileName(className)
                 .build();
             Optional.ofNullable(primaryKeyTypeRef.get()).ifPresent(primaryKeyType -> {
@@ -315,7 +323,9 @@ public class DomainModuleHandler {
                                                 : "java.util.Optional",
                     finderBody.getString(RETURN));
                 var method = "%s %s finder%s(%s);".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
-                    returnType, StringUtils.capitalize(finderName), parameters);
+                    returnType,
+                    StringUtils.capitalize(finderName),
+                    parameters);
                 lines.add(method);
                 lines.add(EMPTY);
             });

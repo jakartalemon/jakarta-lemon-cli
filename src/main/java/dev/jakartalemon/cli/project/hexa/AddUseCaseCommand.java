@@ -40,7 +40,7 @@ public class AddUseCaseCommand implements Callable<Integer> {
     )
     private File file;
 
-    public AddUseCaseCommand()   {
+    public AddUseCaseCommand() {
 
     }
 

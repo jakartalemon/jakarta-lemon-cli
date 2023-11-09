@@ -1,0 +1,82 @@
+openapi: 3.1.0
+info:
+  title: Sample REST for Jakarta Lemon
+  description: This is an example of OpenAPI for REST adapter created from Jakarta Lemon
+  version: "1.0"
+paths:
+  /banks/{bankId}:
+    parameters:
+      - name: bankId
+        in: path
+        required: true
+        description: Bank ID to find
+        schema:
+          type: string
+        style: simple
+    get:
+      tags:
+        - banks
+      operationId: getBankById
+      responses:
+        '200':
+          description: Get Bank by Id
+          content:
+            application/json:
+              schema:
+                type: object
+                $ref: '#/components/schemas/Bank'
+    description: Get bank by id
+  /banks:
+    description: Get bank list
+    get:
+      tags:
+        - banks
+      operationId: getBanksList
+      responses:
+        '200':
+          description: "Gets the list of all banks"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bank'
+
+  /accounts:
+    post:
+      operationId: createAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountRequest'
+      responses:
+        '201':
+          description: Register account information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+components:
+  schemas:
+    AccountResponse:
+      type: object
+    AccountRequest:
+      type: object
+      properties:
+        accountId:
+          type: string
+        userId:
+          type: string
+    Bank:
+      type: object
+      properties:
+        bankId:
+          type: string
+          description: bank ID
+          examples: ["001"]
+        name:
+          type: string
+          description: Bank Name
+          examples: [National Bank]

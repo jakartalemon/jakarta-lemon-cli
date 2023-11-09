@@ -47,7 +47,9 @@ public class Constants {
     public static final String ENTITIES = "entities";
     public static final String ENTITY = "entity";
     public static final String POM = "pom";
+    public static final String POM_XML = "pom.xml";
     public static final String JAR = "jar";
+    public static final String WAR = "war";
     public static final String ADAPTERS = "adapters";
     public static final String USECASE = "usecase";
     public static final String TEMPLATE_2_STRING = "%s %s";
@@ -64,12 +66,6 @@ public class Constants {
     public static final String TEST = "test";
     public static final String JAVA = "java";
     public static final String PACKAGE_TEMPLATE = "%s.%s.%s";
-    public static final String JAKARTA_ENTERPRISE = "jakarta.enterprise";
-    public static final String JAKARTA_ANOTATION = "jakarta.annotation";
-    public static final String JAKARTA_CDI_API_VERSION_KEY = "jakarta.enterprise.cdi-api.version";
-    public static final String JAKARTA_ANOTATION_API_VERSION_KEY = "jakarta.annotation-api.version";
-    public static final String JAKARTA_ANOTATION_API = "jakarta.annotation-api";
-    public static final String JAKARTA_CDI_API = "jakarta.enterprise.cdi-api";
     public static final String PUBLIC = "public";
     public static final String RETURN = "return";
     public static final String IMPORT_PACKAGE_TEMPLATE = "import %s;";
@@ -78,8 +74,8 @@ public class Constants {
     public static final String STRING_TYPE = "String";
     public static final String INTEGER_TYPE = "Integer";
     public static final String BOOLEAN_TYPE = "Boolean";
-    public static final String COLUMN_ANOTATION = "Column";
-    public static final String JOIN_COLUMN_ANOTATION = "JoinColumn";
+    public static final String COLUMN_ANNOTATION = "Column";
+    public static final String JOIN_COLUMN_ANNOTATION = "JoinColumn";
     public static final String ANNOTATION_PROPS = "annotations-props";
     public static final char SLASH = '/';
     public static final String JAKARTA_LEMON_HOST_BASE = "https://jakartalemon.dev";
@@ -92,6 +88,7 @@ public class Constants {
         "org.mockito.junit.jupiter.MockitoExtension");
 
     public static final String DEPENDENCY = "dependency";
+    public static final String PLUGIN = "plugin";
     public static final String PROJECT_INFO_JSON = "project_info.json";
     public static final Map<String, String> LOMBOK_DEPENDENCY = Map.of(
         GROUP_ID, "org.projectlombok",
@@ -110,6 +107,11 @@ public class Constants {
         VERSION, "2.0.1",
         SCOPE, "provided"
     );
+    public static final Map<String, String> INFRASTRUCTURE_DEPENDENCY = Map.of(
+        GROUP_ID, PROJECT_GROUP_ID,
+        ARTIFACT_ID, INFRASTRUCTURE,
+        VERSION, PROJECT_VERSION
+    );
     public static final String DOCS = "docs";
     public static final String DEPENDENCY_GROUP_ID = "groupId";
     public static final String DEPENDENCY_ARTIFACT_ID = "artifactId";
@@ -121,8 +123,16 @@ public class Constants {
     public static final String ONE_TO_ONE = "oneToOne";
 
     public static final String DEFINE_FIELD_PATTERN = "%s%s %s;";
+    public static final String MAVEN_QUERY_PAYARA_MICRO
+        = "q=g:fish.payara.extras+AND+a:payara-micro";
     public static final String MAVEN_QUERY_PERSISTENCE_API
         = "q=g:jakarta.persistence+AND+a:jakarta.persistence-api";
+    public static final String MAVEN_QUERY_JAKARTA_WS_RS_API
+        = "q=g:jakarta.ws.rs+AND+a:jakarta.ws.rs-api";
+    public static final String MAVEN_QUERY_RXJAVA
+        = "q=g:io.reactivex.rxjava3+AND+a:rxjava";
+    public static final String MAVEN_QUERY_LOMBOK
+        = "q=g:org.projectlombok+AND+a:lombok";
 
     public static final String RESPONSE = "response";
     /**
@@ -139,7 +149,39 @@ public class Constants {
 
     public static final String PRIVATE_FINAL_VARIABLE_TEMPLATE = "%sprivate final %s;";
     public static final String PRIVATE_VARIABLE_TEMPLATE = "%sprivate %s;";
+    public static final String PRIVATE_VARIABLE_STATIC_FINAL_TEMPLATE
+        = "%sprivate static final %s;";
+    // JAKARTA SPECS
+    public static final String JAKARTA_ENTERPRISE = "jakarta.enterprise";
+    public static final String JAKARTA_ANNOTATION = "jakarta.annotation";
+    public static final String JAKARTA_CDI_API_VERSION_KEY = "jakarta.enterprise.cdi-api.version";
+    public static final String JAKARTA_ANNOTATION_API_VERSION_KEY
+        = "jakarta.annotation-api.version";
+    public static final String JAKARTA_ANNOTATION_API = "jakarta.annotation-api";
+    public static final String JAKARTA_CDI_API = "jakarta.enterprise.cdi-api";
+    public static final String JAKARTA_WS_RS = "jakarta.ws.rs";
+    public static final String JAKARTA_WS_RS_API = "jakarta.ws.rs-api";
+    public static final String JAKARTA_WS_RS_API_VERSION_KEY = "jakarta.ws.rs-api.version";
+    public static final String JAKARTA_SERVLET = "jakarta.servlet";
+    public static final String JAKARTA_SERVLET_VERSION_KEY = "jakarta.servlet.version";
+    public static final String PROJECT_LOMBOK_VERSION_KEY = "org.projectlombok.version";
+
+    public static final char SLASH_CHAR = '/';
+    public static final char DOUBLE_QUOTES_CHAR = '"';
+    public static final String PATH_PARAM = "path";
+    public static final String CONFIGURATION = "configuration";
+    //VERSION DEFAULT
+    public static final String PAYARA_VERSION_DEFAULT = "6.2023.10";
+    // OPENAPI
+    public static final String OPEN_API_IN_QUERY = "query";
+    public static final String OPEN_API_IN_PATH = "path";
+    public static final String OPEN_API_IN = "in";
+    public static final String OPEN_API_TYPE = "type";
+    public static final String OPEN_API_EXAMPLES = "examples";
+    public static final String OPEN_API_TYPES = "types";
+    public static final String ANNOTATION_FIELD = "annotation";
 
     private Constants() {
     }
+
 }

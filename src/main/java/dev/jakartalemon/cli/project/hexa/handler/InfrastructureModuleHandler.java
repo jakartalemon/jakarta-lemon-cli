@@ -25,6 +25,7 @@ import dev.jakartalemon.cli.util.JsonFileUtil;
 import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
@@ -43,9 +44,9 @@ import static dev.jakartalemon.cli.util.Constants.DOMAIN;
 import static dev.jakartalemon.cli.util.Constants.ENTITIES;
 import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
 import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
-import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANOTATION;
-import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANOTATION_API;
-import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANOTATION_API_VERSION_KEY;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANNOTATION;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANNOTATION_API;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANNOTATION_API_VERSION_KEY;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_CDI_API;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_CDI_API_VERSION_KEY;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_ENTERPRISE;
@@ -75,6 +76,7 @@ public class InfrastructureModuleHandler {
     private final JsonObject databasesConfigs;
 
     private final List<String> props = List.of("url", "password", "user");
+    @Getter
     private String dataSourceName;
 
     private InfrastructureModuleHandler() {
@@ -86,15 +88,11 @@ public class InfrastructureModuleHandler {
         return InfrastructureModuleHandlerHolder.INSTANCE;
     }
 
-    public String getDataSourceName() {
-        return dataSourceName;
-    }
-
     private void createDataSourceClass(JsonObject projectInfo,
                                        String dataSourceClass,
                                        JsonObject connectionInfo) {
         try {
-            this.dataSourceName="java:global/App/Datasource";
+            this.dataSourceName = "java:global/App/Datasource";
             List<String> lines = new ArrayList<>();
             var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), INFRASTRUCTURE,
                 ADAPTERS);
@@ -105,7 +103,8 @@ public class InfrastructureModuleHandler {
             lines.add("@DataSourceDefinition(");
             lines.add("%sclassName = \"%s\",".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
                 dataSourceClass));
-            lines.add("%sname = \"%s\",".formatted(StringUtils.repeat(SPACE,TAB_SIZE),dataSourceName));
+            lines.add("%sname = \"%s\",".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
+                dataSourceName));
             props.forEach(prop -> {
                 if (connectionInfo.containsKey(prop)) {
                     lines.add("%s%s = \"%s\",".formatted(StringUtils.repeat(SPACE,
@@ -156,11 +155,11 @@ public class InfrastructureModuleHandler {
 
     }
 
-    public Optional<Path> createInfrastructureModule(Path projectPath,
-                                                     String groupId,
-                                                     String artifactId,
-                                                     String version,
-                                                     String packageName) {
+    public static Optional<Path> createInfrastructureModule(Path projectPath,
+                                                            String groupId,
+                                                            String artifactId,
+                                                            String version,
+                                                            String packageName) {
         var modulePom = PomModel.builder()
             .parent(Map.of(GROUP_ID, groupId,
                 ARTIFACT_ID, artifactId,
@@ -186,11 +185,10 @@ public class InfrastructureModuleHandler {
                     ARTIFACT_ID, JAKARTA_CDI_API,
                     VERSION, "${%s}".formatted(JAKARTA_CDI_API_VERSION_KEY)
                 ), Map.of(
-                    GROUP_ID, JAKARTA_ANOTATION,
-                    ARTIFACT_ID, JAKARTA_ANOTATION_API,
-                    VERSION, "${%s}".formatted(JAKARTA_ANOTATION_API_VERSION_KEY)
-                )
-                )
+                    GROUP_ID, JAKARTA_ANNOTATION,
+                    ARTIFACT_ID, JAKARTA_ANNOTATION_API,
+                    VERSION, "${%s}".formatted(JAKARTA_ANNOTATION_API_VERSION_KEY)
+                ))
             ).buildModel(
                 BuildModel.builder()
                     .plugins(Json.createArrayBuilder()
@@ -213,13 +211,13 @@ public class InfrastructureModuleHandler {
 
         pomPath.ifPresent(pom -> {
             log.debug("entities created at {}", pom.toAbsolutePath());
-            PomUtil.getInstance()
+            FileClassUtil
                 .createJavaProjectStructure(pom.getParent(), PACKAGE_TEMPLATE.formatted(
                     packageName, INFRASTRUCTURE, ENTITIES));
-            PomUtil.getInstance()
+            FileClassUtil
                 .createJavaProjectStructure(pom.getParent(), "%s.%s.mapper".formatted(
                     packageName, INFRASTRUCTURE));
-            PomUtil.getInstance()
+            FileClassUtil
                 .createJavaProjectStructure(pom.getParent(), PACKAGE_TEMPLATE.formatted(
                     packageName, INFRASTRUCTURE, ADAPTERS));
         });
