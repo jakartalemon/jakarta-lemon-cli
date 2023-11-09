@@ -177,6 +177,8 @@ public class Constants {
     public static final String OPEN_API_IN_PATH = "path";
     public static final String OPEN_API_IN = "in";
     public static final String OPEN_API_TYPE = "type";
+    public static final String OPEN_API_EXAMPLES = "examples";
+    public static final String OPEN_API_TYPES = "types";
     public static final String ANNOTATION_FIELD = "annotation";
 
     private Constants() {

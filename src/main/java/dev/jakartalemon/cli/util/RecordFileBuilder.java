@@ -21,14 +21,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static dev.jakartalemon.cli.util.Constants.COMMA_SPACE;
-import static dev.jakartalemon.cli.util.Constants.PRIVATE_FINAL_VARIABLE_TEMPLATE;
-import static dev.jakartalemon.cli.util.Constants.PRIVATE_VARIABLE_TEMPLATE;
-import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
 import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING;
-import static org.apache.commons.lang3.StringUtils.SPACE;
 
 public class RecordFileBuilder {
 

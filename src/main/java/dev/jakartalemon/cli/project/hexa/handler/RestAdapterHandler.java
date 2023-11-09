@@ -28,6 +28,7 @@ import io.swagger.v3.oas.models.parameters.Parameter;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
+import jakarta.json.JsonString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
@@ -42,12 +43,15 @@ import java.util.function.Consumer;
 
 import static dev.jakartalemon.cli.util.Constants.ANNOTATION_FIELD;
 import static dev.jakartalemon.cli.util.Constants.APPLICATION;
+import static dev.jakartalemon.cli.util.Constants.COMMA_SPACE;
 import static dev.jakartalemon.cli.util.Constants.DOUBLE_QUOTES_CHAR;
 import static dev.jakartalemon.cli.util.Constants.MODEL;
+import static dev.jakartalemon.cli.util.Constants.OPEN_API_EXAMPLES;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN_PATH;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN_QUERY;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_TYPE;
+import static dev.jakartalemon.cli.util.Constants.OPEN_API_TYPES;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 import static dev.jakartalemon.cli.util.Constants.PATH_PARAM;
 import static dev.jakartalemon.cli.util.Constants.RESOURCES;
@@ -103,8 +107,19 @@ public class RestAdapterHandler {
             var schemaDefinition = Json.createObjectBuilder();
             Optional.ofNullable(schema.getProperties())
                 .ifPresent(properties -> properties.forEach((propertyName, property) -> {
-                var propertyType = getType((Schema<?>) property);
-                schemaDefinition.add((String) propertyName, propertyType);
+                var propertySchema = (Schema<?>) property;
+                var propertyType = getType(propertySchema);
+                var fieldContent = Json.createObjectBuilder().add(OPEN_API_TYPE, propertyType);
+                Optional.ofNullable(propertySchema.getExamples()).ifPresent(examples -> {
+                    fieldContent.add(OPEN_API_EXAMPLES, Json.createArrayBuilder(examples.stream().
+                        map(
+                            Object::toString).toList()));
+                });
+                Optional.ofNullable(propertySchema.getTypes()).ifPresent(types -> {
+                    fieldContent.add(OPEN_API_TYPES, Json.createArrayBuilder(types));
+                });
+
+                schemaDefinition.add((String) propertyName, fieldContent);
             }));
             jsonBuilder.add(schemaName, schemaDefinition);
 
@@ -113,9 +128,11 @@ public class RestAdapterHandler {
         schemas = jsonBuilder.build();
     }
 
-    public void createPaths(Consumer<Map<String, List<ResourceDto>>> consumer) {
+    public void createResourcesPaths(JsonObject projectInfo) {
         loadPathsDefinitions();
-        consumer.accept(pathsGroup);
+        log.info("Creating resources");
+        pathsGroup.forEach((pathName, contents) -> createRestResourceBody(pathName, contents,
+            projectInfo));
     }
 
     private void loadPathsDefinitions() {
@@ -151,13 +168,6 @@ public class RestAdapterHandler {
         }
     }
 
-    public void createResourcesPath(Map<String, List<ResourceDto>> pathDefinitions,
-                                    JsonObject projectInfo) {
-        log.info("Creating resources");
-        pathDefinitions.forEach((pathName, contents) -> createRestResourceBody(pathName, contents,
-            projectInfo));
-    }
-
     private void createRestResourceBody(String pathName,
                                         List<ResourceDto> contents,
                                         JsonObject projectInfo) {
@@ -168,7 +178,6 @@ public class RestAdapterHandler {
             addImportClass("io.reactivex.rxjava3.core.Flowable").
             addImportClass("jakarta.ws.rs.container.AsyncResponse").
             addImportClass("jakarta.ws.rs.container.Suspended").
-
             addClassAnnotation("Path(\"%s\")".formatted(pathName));
         contents.forEach(dto -> {
             var pathItem = dto.pathItem();
@@ -214,7 +223,8 @@ public class RestAdapterHandler {
                 responses.forEach((key, response) -> {
                     Content content = response.getContent();
                     String annotation = StringUtils.join(content.keySet().stream().
-                        map(str -> (DOUBLE_QUOTES_CHAR + str + DOUBLE_QUOTES_CHAR)).toList(),
+                        map(str -> (DOUBLE_QUOTES_CHAR + str
+                        + DOUBLE_QUOTES_CHAR)).toList(),
                         Constants.COMMA);
                     annotations.add("Produces({%s})".formatted(annotation));
                 });
@@ -243,12 +253,23 @@ public class RestAdapterHandler {
                 if (response.getContent() != null) {
                     var content = response.getContent();
                     content.values().forEach(mediaType -> {
-                        if (mediaType.getSchema() != null && mediaType.getSchema().get$ref() != null) {
+                        if (mediaType.getSchema() != null
+                            && mediaType.getSchema().get$ref() != null) {
                             var ref = mediaType.getSchema().get$ref();
                             var schemaName = StringUtils.substringAfterLast(ref, SLASH_CHAR);
-                            javaFileBuilder.addImportClass(modelPackage +'.'+ schemaName);
+                            javaFileBuilder.addImportClass(modelPackage + '.' + schemaName);
                             var schemaFields = schemas.get(schemaName);
-                            body.append("Flowable.just(new %s())".formatted(schemaName));
+                            List<String> values = new ArrayList<>();
+                            schemaFields.asJsonObject().values().forEach(value -> {
+                                if (value.asJsonObject().containsKey(OPEN_API_EXAMPLES)) {
+
+                                    values.add(((JsonString) value.asJsonObject().getJsonArray(
+                                        OPEN_API_EXAMPLES).stream().findAny().get()).getString());
+                                }
+                            });
+                            var constructorsParameters = String.join(COMMA_SPACE, values);
+                            body.append("Flowable.just(new %s(%s))".formatted(schemaName,
+                                constructorsParameters));
                             body.append(".subscribe(asyncResponse::resume);");
                         }
                     });
@@ -286,7 +307,7 @@ public class RestAdapterHandler {
 
     public void setModelPackage(JsonObject projectInfo) {
         modelPackage = Constants.PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE),
-                                                            APPLICATION, MODEL);
+            APPLICATION, MODEL);
 
     }
 

@@ -23,7 +23,6 @@ import dev.jakartalemon.cli.util.PomUtil;
 import dev.jakartalemon.cli.util.RecordFileBuilder;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
-import jakarta.json.JsonString;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -37,6 +36,7 @@ import static dev.jakartalemon.cli.util.Constants.APPLICATION;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_JAKARTA_WS_RS_API;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_RXJAVA;
 import static dev.jakartalemon.cli.util.Constants.MODEL;
+import static dev.jakartalemon.cli.util.Constants.OPEN_API_TYPE;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 import static dev.jakartalemon.cli.util.OpenApiUtil.openApiType2JavaType;
 
@@ -67,9 +67,10 @@ public class ApplicationModuleHandler {
             var packageName = projectInfo.getString(PACKAGE);
             var recordFileBuilder = new RecordFileBuilder().setFileName(className)
                 .setPackage(packageName, APPLICATION, MODEL);
-            properties.forEach((property, propertyType) -> {
+            properties.forEach((property, fieldContent) -> {
+                var propertyType = fieldContent.asJsonObject().getString(OPEN_API_TYPE);
                 recordFileBuilder.addVariableDeclaration(
-                    openApiType2JavaType(((JsonString) propertyType).getString()), property);
+                    openApiType2JavaType(propertyType), property);
             });
 
             recordFileBuilder.setModulePath(projectInfo.getString(APPLICATION))

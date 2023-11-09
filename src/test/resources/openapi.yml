@@ -75,7 +75,7 @@ components:
         bankId:
           type: string
           description: bank ID
-          examples: [001]
+          examples: ["001"]
         name:
           type: string
           description: Bank Name

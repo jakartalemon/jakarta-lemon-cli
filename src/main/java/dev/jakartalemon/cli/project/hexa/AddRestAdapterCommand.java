@@ -51,9 +51,7 @@ public class AddRestAdapterCommand implements Runnable {
             restAdapterHandler.setModelPackage(projectInfo);
             restAdapterHandler.createComponents(
                 definitions -> appModuleHandler.createRecords(definitions, projectInfo));
-            restAdapterHandler.createPaths(
-                pathDefinitions -> restAdapterHandler.createResourcesPath(pathDefinitions,
-                    projectInfo));
+            restAdapterHandler.createResourcesPaths(projectInfo);
             restAdapterHandler.createApplicationPath(projectInfo);
         });
 
