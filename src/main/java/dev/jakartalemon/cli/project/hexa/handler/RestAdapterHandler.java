@@ -25,6 +25,7 @@ import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.parameters.Parameter;
+import io.swagger.v3.oas.models.responses.ApiResponses;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
@@ -174,8 +175,8 @@ public class RestAdapterHandler {
         String className
             = StringUtils.capitalize(StringUtils.substringAfter(pathName, SLASH_CHAR)) + "Resource";
         JavaFileBuilder javaFileBuilder = new JavaFileBuilder().setClassName(className).
-            addImportClass("jakarta.ws.rs.Path").
             addImportClass("io.reactivex.rxjava3.core.Flowable").
+            addImportClass("jakarta.ws.rs.Path").
             addImportClass("jakarta.ws.rs.container.AsyncResponse").
             addImportClass("jakarta.ws.rs.container.Suspended").
             addClassAnnotation("Path(\"%s\")".formatted(pathName));
@@ -240,6 +241,19 @@ public class RestAdapterHandler {
                 });
 
             });
+        var params = createParametersToList(parameters, resourceName, operation, javaFileBuilder);
+        var body = new StringBuilder();
+        Optional.ofNullable(operation.getResponses()).ifPresent(responses -> createResponses(
+            responses, javaFileBuilder, body));
+        javaFileBuilder.addMethod(operationId, params.build(), "void", null, annotations, body.
+            toString())
+            .addImportClass("jakarta.ws.rs." + method);
+    }
+
+    private JsonObjectBuilder createParametersToList(List<Parameter> parameters,
+                                                     String resourceName,
+                                                     Operation operation,
+                                                     JavaFileBuilder javaFileBuilder) {
         var params = convertParamsToList(parameters, resourceName)
             .add("asyncResponse", Json.createObjectBuilder(
                 Map.of(
@@ -247,38 +261,49 @@ public class RestAdapterHandler {
                     ANNOTATION_FIELD, "Suspended"
                 )
             ));
-        var body = new StringBuilder();
-        Optional.ofNullable(operation.getResponses()).ifPresent(responses -> {
-            responses.forEach((key, response) -> {
-                if (response.getContent() != null) {
-                    var content = response.getContent();
-                    content.values().forEach(mediaType -> {
-                        if (mediaType.getSchema() != null
-                            && mediaType.getSchema().get$ref() != null) {
-                            var ref = mediaType.getSchema().get$ref();
-                            var schemaName = StringUtils.substringAfterLast(ref, SLASH_CHAR);
-                            javaFileBuilder.addImportClass(modelPackage + '.' + schemaName);
-                            var schemaFields = schemas.get(schemaName);
-                            List<String> values = new ArrayList<>();
-                            schemaFields.asJsonObject().values().forEach(value -> {
-                                if (value.asJsonObject().containsKey(OPEN_API_EXAMPLES)) {
-
-                                    values.add(((JsonString) value.asJsonObject().getJsonArray(
-                                        OPEN_API_EXAMPLES).stream().findAny().get()).getString());
-                                }
-                            });
-                            var constructorsParameters = String.join(COMMA_SPACE, values);
-                            body.append("Flowable.just(new %s(%s))".formatted(schemaName,
-                                constructorsParameters));
-                            body.append(".subscribe(asyncResponse::resume);");
-                        }
-                    });
-                }
+        Optional.ofNullable(operation.getRequestBody()).ifPresent(requestBody -> {
+            var paramsRequestBody
+                = requestBody.getContent().values().stream().map(mediaType -> StringUtils.
+                substringAfterLast(
+                    mediaType.getSchema().get$ref(),
+                    SLASH_CHAR)).toList();
+            paramsRequestBody.forEach(item -> {
+                javaFileBuilder.addImportClass(modelPackage + '.' + item);
+                params.add(StringUtils.uncapitalize(item), item);
             });
         });
-        javaFileBuilder.addMethod(operationId, params.build(), "void", null, annotations, body.
-            toString())
-            .addImportClass("jakarta.ws.rs." + method);
+        return params;
+    }
+
+    private void createResponses(ApiResponses responses,
+                                 JavaFileBuilder javaFileBuilder,
+                                 StringBuilder body) {
+        responses.forEach((key, response) -> {
+            if (response.getContent() != null) {
+                var content = response.getContent();
+                content.values().forEach(mediaType -> {
+                    if (mediaType.getSchema() != null
+                        && mediaType.getSchema().get$ref() != null) {
+                        var ref = mediaType.getSchema().get$ref();
+                        var schemaName = StringUtils.substringAfterLast(ref, SLASH_CHAR);
+                        javaFileBuilder.addImportClass(modelPackage + '.' + schemaName);
+                        var schemaFields = schemas.get(schemaName);
+                        List<String> values = new ArrayList<>();
+                        schemaFields.asJsonObject().values().forEach(value -> {
+                            if (value.asJsonObject().containsKey(OPEN_API_EXAMPLES)) {
+
+                                values.add(((JsonString) value.asJsonObject().getJsonArray(
+                                    OPEN_API_EXAMPLES).stream().findAny().get()).getString());
+                            }
+                        });
+                        var constructorsParameters = String.join(COMMA_SPACE, values);
+                        body.append("Flowable.just(new %s(%s))".formatted(schemaName,
+                            constructorsParameters));
+                        body.append(".subscribe(asyncResponse::resume);");
+                    }
+                });
+            }
+        });
     }
 
     private JsonObjectBuilder convertParamsToList(List<Parameter> parameters,
