@@ -170,6 +170,8 @@ public class Constants {
     public static final char DOUBLE_QUOTES_CHAR = '"';
     public static final String PATH_PARAM = "path";
     public static final String CONFIGURATION = "configuration";
+    public static final String META_INF = "META-INF";
+    public static final String MAP_TO_MODEL = "mapToModel";
     //VERSION DEFAULT
     public static final String PAYARA_VERSION_DEFAULT = "6.2023.10";
     // OPENAPI

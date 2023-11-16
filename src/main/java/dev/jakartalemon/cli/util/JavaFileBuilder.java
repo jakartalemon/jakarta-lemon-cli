@@ -61,9 +61,11 @@ public class JavaFileBuilder {
     private String className;
     private String modulePath;
     private String resource;
-    private String fileName;
+
     private String packageName;
     private String extendClass;
+
+    private boolean isInterface;
     private final Map<String, String> importablesMap;
 
     public JavaFileBuilder() {
@@ -77,6 +79,11 @@ public class JavaFileBuilder {
             submoduleName);
         this.packageValue = Constants.TEMPLATE_2_STRING_COMMA.formatted(Constants.PACKAGE,
             packageName);
+        return this;
+    }
+
+    public JavaFileBuilder isInterface(boolean isInterface) {
+        this.isInterface = isInterface;
         return this;
     }
 
@@ -128,10 +135,14 @@ public class JavaFileBuilder {
                 annotation)));
         var declarations = TEMPLATE_2_STRING.formatted(variableType, variableName)
             + (StringUtils.isNotEmpty(variableInit) ? (" = " + variableInit) : EMPTY);
-        var variableDeclarationTemplate = isFinal ? PRIVATE_VARIABLE_STATIC_FINAL_TEMPLATE
-                                      : (isConstructor
-                                         ? PRIVATE_FINAL_VARIABLE_TEMPLATE
-                                         : PRIVATE_VARIABLE_TEMPLATE);
+        String variableDeclarationTemplate = isFinal ? PRIVATE_VARIABLE_STATIC_FINAL_TEMPLATE
+                                             : (isConstructor
+                                                ? PRIVATE_FINAL_VARIABLE_TEMPLATE
+                                                : PRIVATE_VARIABLE_TEMPLATE);
+        if (isInterface) {
+            variableDeclarationTemplate = StringUtils.
+                remove(variableDeclarationTemplate, "private ");
+        }
         var variableDeclaration
             = variableDeclarationTemplate.formatted(StringUtils.repeat(SPACE, TAB_SIZE),
                 declarations);
@@ -152,11 +163,6 @@ public class JavaFileBuilder {
         return this;
     }
 
-    public JavaFileBuilder setFileName(String fileName) {
-        this.fileName = fileName;
-        return this;
-    }
-
     public JavaFileBuilder setResource(String resource) {
         this.resource = resource;
         return this;
@@ -169,10 +175,12 @@ public class JavaFileBuilder {
         importsList.forEach(importItem -> lines.add("import %s;".formatted(importItem)));
         lines.add(StringUtils.EMPTY);
         lines.addAll(classAnnotationsList.stream().map(annotation -> '@' + annotation).toList());
+        var classDeclaration = isInterface ? "interface" : "class";
         if (StringUtils.isBlank(extendClass)) {
-            lines.add("public class %s {".formatted(className));
+            lines.add("public %s %s {".formatted(classDeclaration, className));
         } else {
-            lines.add("public class %s extends %s {".formatted(className, extendClass));
+            lines.add("public %s %s extends %s {".formatted(classDeclaration, className,
+                extendClass));
         }
         lines.add(StringUtils.EMPTY);
         lines.addAll(variablesList);
@@ -185,7 +193,7 @@ public class JavaFileBuilder {
         }
         lines.add("}");
 
-        FileClassUtil.writeClassFile(modulePath, resource, packageName, fileName, lines);
+        FileClassUtil.writeClassFile(modulePath, resource, packageName, className, lines);
     }
 
     public JavaFileBuilder addMethod(String methodName,
@@ -240,24 +248,29 @@ public class JavaFileBuilder {
             return TEMPLATE_2_STRING.formatted(paramType, param.getKey());
 
         }).collect(Collectors.joining(COMMA_SPACE));
-        Optional.ofNullable(annotations).ifPresent(annotationsList -> {
-            methodsList.add(String.join(System.lineSeparator(),
-                annotationsList.stream()
-                    .map(annotation -> "%s@%s".formatted(StringUtils.repeat(
-                    SPACE, TAB_SIZE), annotation)).toList()));
-        });
-        var methodSignature = "%s%s %s %s (%s) {".formatted(StringUtils.repeat(
-            SPACE, TAB_SIZE), PUBLIC, returnValue, methodName, parameters);
-        methodsList.add(methodSignature);
-        if (StringUtils.isNotBlank(body)) {
-            methodsList.add("%s%s".formatted(StringUtils.repeat(SPACE, TAB_SIZE * 2), body));
+        Optional.ofNullable(annotations).ifPresent(annotationsList -> methodsList.add(String.join(
+            System.lineSeparator(),
+            annotationsList.stream()
+                .map(annotation -> "%s@%s".formatted(StringUtils.repeat(
+                SPACE, TAB_SIZE), annotation)).toList())));
+        if (isInterface) {
+            var methodSignature = "%s %s %s (%s);".formatted(StringUtils.repeat(
+                SPACE, TAB_SIZE), returnValue, methodName, parameters);
+            methodsList.add(methodSignature);
+        } else {
+            var methodSignature = "%s%s %s %s (%s) {".formatted(StringUtils.repeat(
+                SPACE, TAB_SIZE), PUBLIC, returnValue, methodName, parameters);
+            methodsList.add(methodSignature);
+            if (StringUtils.isNotBlank(body)) {
+                methodsList.add("%s%s".formatted(StringUtils.repeat(SPACE, TAB_SIZE * 2), body));
+            }
+            if (defaultReturnValue != null) {
+                methodsList.add(DEFINE_FIELD_PATTERN.
+                    formatted(StringUtils.repeat(SPACE, TAB_SIZE * 2),
+                        RETURN, defaultReturnValue));
+            }
+            methodsList.add("%s}".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
         }
-        if (defaultReturnValue != null) {
-            methodsList.add(DEFINE_FIELD_PATTERN.
-                formatted(StringUtils.repeat(SPACE, TAB_SIZE * 2),
-                    RETURN, defaultReturnValue));
-        }
-        methodsList.add("%s}".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
         return this;
     }
 

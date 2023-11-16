@@ -26,6 +26,9 @@ import java.io.File;
 import java.util.concurrent.Callable;
 
 import static dev.jakartalemon.cli.util.Constants.ENTITIES;
+import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
+import static dev.jakartalemon.cli.util.Constants.MAP_TO_MODEL;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
@@ -45,25 +48,36 @@ public class AddEntityCommand implements Callable<Integer> {
     )
     private File file;
 
-    public AddEntityCommand() {
-
-    }
-
     @Override
     public Integer call() throws Exception {
         var infrastructureModuleHandler = InfrastructureModuleHandler.getInstance();
         infrastructureModuleHandler.createDatabaseConfig(file);
         var jpaPersistenceHandler = JpaPersistenceHandler.getInstance();
+        var persistenceUnitName = "persistenceUnit";
         return JsonFileUtil.getFileJson(file.toPath())
             .map(structure -> JsonFileUtil.getProjectInfo().map(projectInfo -> {
             structure.getJsonArray(ENTITIES).stream()
                 .map(JsonValue::asJsonObject)
                 .forEach(item -> item.forEach(
-                (key, classDef) -> jpaPersistenceHandler.createEntityClass(projectInfo, key,
-                    classDef.asJsonObject())));
+                (key, classDef) -> {
+                    var definition = classDef.asJsonObject();
+                    jpaPersistenceHandler.createEntityClass(projectInfo, key, definition);
+                    if (definition.containsKey(MAP_TO_MODEL)) {
+                        infrastructureModuleHandler.createMapper(
+                            projectInfo.getString(PACKAGE),
+                            projectInfo.getString(INFRASTRUCTURE),
+                            definition.getString(MAP_TO_MODEL),
+                            key
+                        );
+                    }
+
+                }));
             jpaPersistenceHandler.createPersistenceUnit(infrastructureModuleHandler.
-                getDataSourceName());
+                getDataSourceName(), persistenceUnitName);
             jpaPersistenceHandler.savePersistenceXml();
+
+            jpaPersistenceHandler.createEntityManagerProvider(projectInfo, persistenceUnitName);
+            infrastructureModuleHandler.createCdiDescriptor(projectInfo.getString(INFRASTRUCTURE));
             return 0;
         }).orElse(1)).orElse(2);
     }

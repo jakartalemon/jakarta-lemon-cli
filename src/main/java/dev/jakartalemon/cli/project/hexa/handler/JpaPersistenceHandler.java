@@ -15,6 +15,29 @@
  */
 package dev.jakartalemon.cli.project.hexa.handler;
 
+import dev.jakartalemon.cli.util.DependenciesUtil;
+import dev.jakartalemon.cli.util.DocumentXmlUtil;
+import dev.jakartalemon.cli.util.FileClassUtil;
+import dev.jakartalemon.cli.util.HttpClientUtil;
+import dev.jakartalemon.cli.util.PomUtil;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonReader;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+
 import static dev.jakartalemon.cli.util.Constants.ADAPTERS;
 import static dev.jakartalemon.cli.util.Constants.ANNOTATION_PROPS;
 import static dev.jakartalemon.cli.util.Constants.BOOLEAN_TYPE;
@@ -44,28 +67,11 @@ import static dev.jakartalemon.cli.util.Constants.VERSION;
 import static dev.jakartalemon.cli.util.Constants.XMLNS;
 import static dev.jakartalemon.cli.util.Constants.XMLNS_XSI;
 import static dev.jakartalemon.cli.util.Constants.XMLNS_XSI_INSTANCE;
-import dev.jakartalemon.cli.util.DependenciesUtil;
-import dev.jakartalemon.cli.util.DocumentXmlUtil;
-import dev.jakartalemon.cli.util.FileClassUtil;
-import dev.jakartalemon.cli.util.HttpClientUtil;
+import dev.jakartalemon.cli.util.JavaFileBuilder;
 import static dev.jakartalemon.cli.util.LinesUtils.removeLastComma;
-import dev.jakartalemon.cli.util.PomUtil;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonReader;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPathExpressionException;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
+import static javax.xml.xpath.XPathConstants.NODESET;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
-import org.w3c.dom.Document;
 
 /**
  *
@@ -73,7 +79,7 @@ import org.w3c.dom.Document;
  */
 @Slf4j
 public class JpaPersistenceHandler {
-
+    
     private static final String IMPORT_COLUMN = "import jakarta.persistence.%s;";
     private static final String IMPORT_MANY_TO_ONE = "import jakarta.persistence.ManyToOne;";
     private static final String IMPORT_ONE_TO_ONE = "import jakarta.persistence.OneToOne;";
@@ -83,16 +89,16 @@ public class JpaPersistenceHandler {
         {MANY_TO_ONE, IMPORT_MANY_TO_ONE},
         {ONE_TO_ONE, IMPORT_ONE_TO_ONE}
     };
-
+    
     public static JpaPersistenceHandler getInstance() {
         return JpaPersistenceHandlerHolder.INSTANCE;
     }
-
+    
     private JsonObject columnAnnotationProperties;
     private JsonObject joinColumnAnnotationProperties;
     private Document persistenceXml;
     private Path persistenceXmlPath;
-
+    
     private JpaPersistenceHandler() {
         try {
             addJpaDependency();
@@ -102,13 +108,13 @@ public class JpaPersistenceHandler {
             log.error(ex.getMessage(), ex);
         }
     }
-
+    
     private void addJpaDependency() throws InterruptedException, IOException, URISyntaxException {
         DependenciesUtil.getLastVersionDependency(
             MAVEN_QUERY_PERSISTENCE_API).ifPresent(dependency -> PomUtil.getInstance()
             .addDependency(dependency, INFRASTRUCTURE));
     }
-
+    
     private boolean checkAssociation(List<String> lines,
                                      JsonObject definitionValue) {
         for (var descriptionsRow : ASSOCIATIONS_DESCRIPTIONS) {
@@ -124,9 +130,9 @@ public class JpaPersistenceHandler {
             }
         }
         return false;
-
+        
     }
-
+    
     public void createEntityClass(JsonObject projectInfo,
                                   String className,
                                   JsonObject jsonObject) {
@@ -156,10 +162,10 @@ public class JpaPersistenceHandler {
                 var hasAssociation = checkAssociation(lines, definitionValue);
                 if (hasAssociation) {
                     checkColumnDefinition(lines, definitionValue, JOIN_COLUMN_ANNOTATION,
-                                          joinColumnAnnotationProperties);
+                        joinColumnAnnotationProperties);
                 } else {
                     checkColumnDefinition(lines, definitionValue, COLUMN_ANNOTATION,
-                                          columnAnnotationProperties);
+                        columnAnnotationProperties);
                 }
                 lines.add("%sprivate %s %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE), type,
                     fieldName));
@@ -167,12 +173,12 @@ public class JpaPersistenceHandler {
             });
             lines.add("}");
             FileClassUtil.writeClassFile(projectInfo, packageName, className, lines, INFRASTRUCTURE);
-
+            
         } catch (IOException ex) {
             log.error(ex.getMessage(), ex);
         }
     }
-
+    
     private String getPropertyValue(JsonObject definitionValue,
                                     JsonObject annotationsProperties,
                                     String property) {
@@ -186,10 +192,10 @@ public class JpaPersistenceHandler {
         if (StringUtils.equals(valueType, BOOLEAN_TYPE)) {
             return "\"%s\"".formatted(definitionValue.getBoolean(property));
         }
-
+        
         return null;
     }
-
+    
     private void checkColumnDefinition(List<String> lines,
                                        JsonObject definitionValue,
                                        String annotation,
@@ -213,12 +219,12 @@ public class JpaPersistenceHandler {
                     propertyValue));
             }
         });
-
+        
         removeLastComma(lines);
-
+        
         lines.add("%s)".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
     }
-
+    
     private void readAnnotationsDefinitions() throws IOException, InterruptedException,
                                                      URISyntaxException {
         JsonObject definitions = HttpClientUtil.getJson(JAKARTA_LEMON_CONFIG_URL,
@@ -228,14 +234,14 @@ public class JpaPersistenceHandler {
         this.joinColumnAnnotationProperties = definitions.getJsonObject(ANNOTATION_PROPS).
             getJsonObject(JOIN_COLUMN_ANNOTATION);
     }
-
+    
     private void createPersistenceXml() {
         try {
             this.persistenceXmlPath = Paths.get(".", INFRASTRUCTURE, SRC, MAIN, RESOURCES,
                 PERSISTENCE_FILE_NAME).
                 normalize();
             Files.createDirectories(persistenceXmlPath.getParent());
-
+            
             this.persistenceXml = DocumentXmlUtil.openDocument(persistenceXmlPath).orElseGet(() -> {
                 try {
                     var document = DocumentXmlUtil.newDocument(PERSISTENCE);
@@ -257,28 +263,58 @@ public class JpaPersistenceHandler {
         } catch (IOException ex) {
             log.error(ex.getMessage(), ex);
         }
-
+        
     }
-
+    
     public void savePersistenceXml() {
         DocumentXmlUtil.saveDocument(persistenceXmlPath, persistenceXml);
     }
-
-    public void createPersistenceUnit(String dataSourceName) {
+    
+    public void createPersistenceUnit(String dataSourceName,
+                                      String persistenceUnitName) {
         try {
-            DocumentXmlUtil.createElement(persistenceXml, "/persistence", "persistence-unit")
-                .ifPresent(persistenceUnitElement -> {
-                    persistenceUnitElement.setAttribute(NAME, "persistenceUnit");
-                    DocumentXmlUtil.createElement(persistenceXml, persistenceUnitElement,
-                        "jta-data-source", dataSourceName);
-                });
+            var xPath = XPathFactory.newInstance().newXPath();
+            var persistenceUnitExp = "/persistence/persistence-unit[@name='%s']".
+                formatted(persistenceUnitName);
+            var searchResult = (NodeList) xPath.compile(persistenceUnitExp).evaluate(persistenceXml,
+                NODESET);
+            if (searchResult.getLength() == 0) {
+                
+                DocumentXmlUtil.createElement(persistenceXml, "/persistence", "persistence-unit")
+                    .ifPresent(persistenceUnitElement -> {
+                        persistenceUnitElement.setAttribute(NAME, persistenceUnitName);
+                        DocumentXmlUtil.createElement(persistenceXml, persistenceUnitElement,
+                            "jta-data-source", dataSourceName);
+                    });
+            }
         } catch (XPathExpressionException e) {
             log.error(e.getMessage(), e);
         }
     }
-
+    
+    public void createEntityManagerProvider(JsonObject projectInfo,
+                                            String persistenceUnitName) {
+        try {
+            var javaFileBuilder = new JavaFileBuilder()
+                .setModulePath(projectInfo.getString(INFRASTRUCTURE))
+                .setPackage(projectInfo.getString(PACKAGE), INFRASTRUCTURE, ADAPTERS)
+                .addClassAnnotation("ApplicationScoped")
+                .addImportClass("jakarta.enterprise.context.ApplicationScoped")
+                .addImportClass("jakarta.enterprise.inject.Produces")
+                .addImportClass("jakarta.persistence.PersistenceContext")
+                .addImportClass("jakarta.persistence.EntityManager")
+                .setClassName("JpaProvider")
+                .addVariableDeclaration("EntityManager", "em",
+                    "Produces @PersistenceContext(unitName = \"%s\")".formatted(
+                        persistenceUnitName));
+            javaFileBuilder.build();
+        } catch (IOException ex) {
+            log.error(ex.getMessage(), ex);
+        }
+    }
+    
     private static class JpaPersistenceHandlerHolder {
-
+        
         private static final JpaPersistenceHandler INSTANCE = new JpaPersistenceHandler();
     }
 }

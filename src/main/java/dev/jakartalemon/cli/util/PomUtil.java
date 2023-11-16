@@ -176,10 +176,8 @@ public class PomUtil {
                         NODESET);
                     if (nodeList.getLength() == 0) {
                         DocumentXmlUtil.createElement(documentXml, "/project/build/plugins", PLUGIN).
-                            ifPresent(pluginElement -> {
-                                DocumentXmlUtil.createElementWithContent(documentXml, pluginElement,
-                                    plugin);
-                            });
+                            ifPresent(pluginElement -> DocumentXmlUtil.createElementWithContent(
+                            documentXml, pluginElement, plugin));
                         DocumentXmlUtil.saveDocument(pathXml, documentXml);
                     }
                 } catch (XPathExpressionException ex) {

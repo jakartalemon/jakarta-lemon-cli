@@ -80,3 +80,15 @@ components:
           type: string
           description: Bank Name
           examples: [National Bank]
+    PersonResponse:
+      type: object
+      properties:
+        dni:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        birthdate:
+          type: string
+          format: date

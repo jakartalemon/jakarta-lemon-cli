@@ -158,9 +158,7 @@ public class RestAdapterHandler {
                     .addImportClass("jakarta.ws.rs.ApplicationPath")
                     .addImportClass("jakarta.ws.rs.core.Application")
                     .addClassAnnotation("ApplicationPath(\"/api\")")
-                    .setFileName(className)
                     .setModulePath(projectInfo.getString(APPLICATION))
-                    .setFileName(className)
                     .setExtendClass("Application")
                     .setPackage(projectInfo.getString(PACKAGE), APPLICATION, RESOURCES);
             javaFileBuilder.build();
@@ -201,8 +199,7 @@ public class RestAdapterHandler {
 
         try {
             javaFileBuilder.setModulePath(projectInfo.getString(APPLICATION))
-                .setFileName(className).
-                setPackage(projectInfo.getString(PACKAGE), APPLICATION, RESOURCES).build();
+                .setPackage(projectInfo.getString(PACKAGE), APPLICATION, RESOURCES).build();
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }
