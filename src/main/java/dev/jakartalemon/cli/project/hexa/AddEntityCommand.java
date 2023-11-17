@@ -18,6 +18,7 @@ package dev.jakartalemon.cli.project.hexa;
 import dev.jakartalemon.cli.project.hexa.handler.InfrastructureModuleHandler;
 import dev.jakartalemon.cli.project.hexa.handler.JpaPersistenceHandler;
 import dev.jakartalemon.cli.util.JsonFileUtil;
+import jakarta.json.JsonObject;
 import jakarta.json.JsonValue;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
@@ -50,36 +51,61 @@ public class AddEntityCommand implements Callable<Integer> {
 
     @Override
     public Integer call() throws Exception {
+
+        return JsonFileUtil.getFileJson(file.toPath())
+            .map(
+                structure -> JsonFileUtil.getProjectInfo().map(
+                    projectInfo -> createEntitiesWithDefinition(structure, projectInfo)
+                ).orElse(1)
+            ).orElse(2);
+    }
+
+    private int createEntitiesWithDefinition(JsonObject structure,
+                                             JsonObject projectInfo) {
         var infrastructureModuleHandler = InfrastructureModuleHandler.getInstance();
         infrastructureModuleHandler.createDatabaseConfig(file);
         var jpaPersistenceHandler = JpaPersistenceHandler.getInstance();
         var persistenceUnitName = "persistenceUnit";
-        return JsonFileUtil.getFileJson(file.toPath())
-            .map(structure -> JsonFileUtil.getProjectInfo().map(projectInfo -> {
-            structure.getJsonArray(ENTITIES).stream()
-                .map(JsonValue::asJsonObject)
-                .forEach(item -> item.forEach(
-                (key, classDef) -> {
-                    var definition = classDef.asJsonObject();
-                    jpaPersistenceHandler.createEntityClass(projectInfo, key, definition);
-                    if (definition.containsKey(MAP_TO_MODEL)) {
-                        infrastructureModuleHandler.createMapper(
-                            projectInfo.getString(PACKAGE),
-                            projectInfo.getString(INFRASTRUCTURE),
-                            definition.getString(MAP_TO_MODEL),
-                            key
-                        );
-                    }
+        structure.getJsonArray(ENTITIES).stream()
+            .map(JsonValue::asJsonObject)
+            .forEach(item -> item.forEach(
+            (key, classDef) -> {
+                createEntity(classDef, infrastructureModuleHandler,
+                    jpaPersistenceHandler, projectInfo, key);
+                createRepository(key, infrastructureModuleHandler, projectInfo);
+            }));
+        jpaPersistenceHandler.createPersistenceUnit(infrastructureModuleHandler.
+            getDataSourceName(), persistenceUnitName);
+        jpaPersistenceHandler.savePersistenceXml();
 
-                }));
-            jpaPersistenceHandler.createPersistenceUnit(infrastructureModuleHandler.
-                getDataSourceName(), persistenceUnitName);
-            jpaPersistenceHandler.savePersistenceXml();
+        jpaPersistenceHandler.createEntityManagerProvider(projectInfo, persistenceUnitName);
 
-            jpaPersistenceHandler.createEntityManagerProvider(projectInfo, persistenceUnitName);
-            infrastructureModuleHandler.createCdiDescriptor(projectInfo.getString(INFRASTRUCTURE));
-            return 0;
-        }).orElse(1)).orElse(2);
+        infrastructureModuleHandler.createCdiDescriptor(projectInfo.getString(INFRASTRUCTURE));
+        return 0;
+    }
+
+    private void createRepository(String entityName,
+                                  InfrastructureModuleHandler infrastructureModuleHandler,
+                                  JsonObject projectInfo) {
+    }
+
+    private void createEntity(JsonValue classDef,
+                                InfrastructureModuleHandler infrastructureModuleHandler,
+                                JpaPersistenceHandler jpaPersistenceHandler,
+                                JsonObject projectInfo,
+                                String key) {
+
+        var definition = classDef.asJsonObject();
+        jpaPersistenceHandler.createEntityClass(projectInfo, key, definition);
+        if (definition.containsKey(MAP_TO_MODEL)) {
+            infrastructureModuleHandler.createMapper(
+                projectInfo.getString(PACKAGE),
+                projectInfo.getString(INFRASTRUCTURE),
+                definition.getString(MAP_TO_MODEL),
+                key
+            );
+        }
+
     }
 
 }
