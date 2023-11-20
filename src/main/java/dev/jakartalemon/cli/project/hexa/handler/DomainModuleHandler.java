@@ -92,7 +92,6 @@ public class DomainModuleHandler {
             var classNameInstance = StringUtils.uncapitalize(className);
             javaFileBuilder.addVariableDeclaration(className, classNameInstance, "InjectMocks")
                 .setModulePath(projectInfo.getString(DOMAIN))
-                .setFileName(classTestName)
                 .setResource(TEST)
                 .build();
         } catch (IOException e) {
@@ -194,7 +193,6 @@ public class DomainModuleHandler {
 
             javaFileBuilder
                 .setModulePath(projectInfo.getString(DOMAIN))
-                .setFileName(className)
                 .build();
         } catch (IOException ex) {
             log.error(ex.getMessage(), ex);
@@ -273,7 +271,6 @@ public class DomainModuleHandler {
             });
             javaFileBuilder
                 .setModulePath(projectInfo.getString(DOMAIN))
-                .setFileName(className)
                 .build();
             Optional.ofNullable(primaryKeyTypeRef.get()).ifPresent(primaryKeyType -> {
                 try {
@@ -322,7 +319,7 @@ public class DomainModuleHandler {
                 var returnType = "%s<%s>".formatted(isCollection ? "java.util.stream.Stream"
                                                 : "java.util.Optional",
                     finderBody.getString(RETURN));
-                var method = "%s %s finder%s(%s);".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
+                var method = "%s %s find%s(%s);".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
                     returnType,
                     StringUtils.capitalize(finderName),
                     parameters);

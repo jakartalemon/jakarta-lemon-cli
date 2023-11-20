@@ -9,7 +9,7 @@
     },
     "entities": [
         {
-            "Address": {
+            "AddressEntity": {
                 "fields": {
                     "addressId": {
                         "primaryKey": true,
@@ -18,7 +18,7 @@
                     } 
                 }  
             },
-            "Person": {
+            "PersonEntity": {
                 "mapToModel": "Person",
                 "fields": {
                     "personId": {
@@ -31,13 +31,14 @@
                         "type": "String" 
                     },
                     "address": {
-                        "type": "Address",
+                        "type": "AddressEntity",
                         "oneToOne": true,
                         "name": "address_id"  
                     }
                 }
             },
-            "Bank": {
+            "BankEntity": {
+                "mapToModel": "Bank",
                 "fields": {
                     "bankId": {
                         "primaryKey": true,
@@ -52,7 +53,7 @@
                     }
                 }
             },
-            "LocalBank": {
+            "LocalBankEntity": {
                 "fields": {
                     "localBankId": {
                         "primaryKey": true,
@@ -66,7 +67,7 @@
                         "length": 100
                     },
                     "bank": {
-                        "type": "Bank",
+                        "type": "BankEntity",
                         "manyToOne": true,
                         "name": "bank_id"
                     }

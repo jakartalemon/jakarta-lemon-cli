@@ -1,0 +1,31 @@
+{
+    "AtmService": {
+        "injects": [
+            "BankRepository",
+            "AccountRepository",
+            "PersonRepository",
+            "TransactionRepository"
+        ],
+        "methods": {
+            "withdrawal": {
+                "amount": "double",
+                "customer": "Person",
+                "return": "double:0"
+            },
+            "payment": {
+                "amount": "double",
+                "customer": "Person"
+            }
+        }
+    },
+    "PersonService": {
+        "injects": [
+            "PersonRepository"
+        ],
+        "methods": {
+            "findAll": {
+                "return": "java.util.stream.Stream<Person>:personRepository.findAll()"
+            }
+        }
+    }
+}

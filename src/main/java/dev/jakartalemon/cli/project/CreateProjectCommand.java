@@ -16,8 +16,8 @@
 package dev.jakartalemon.cli.project;
 
 import dev.jakartalemon.cli.JakartaLemonCli;
-import dev.jakartalemon.cli.project.constants.Archetype;
 import dev.jakartalemon.cli.project.hexa.CreateHexagonalProject;
+import dev.jakartalemon.cli.util.Constants;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import picocli.CommandLine;
@@ -94,7 +94,7 @@ public class CreateProjectCommand implements Runnable {
             if (verbose) {
                 log.info("{} created", created);
             }
-            var archetype = Archetype.valueOf(archetypeOption.toUpperCase());
+            var archetype = Constants.Archetype.valueOf(archetypeOption.toUpperCase());
             if (StringUtils.isBlank(packageName)) {
                 packageName = groupId + '.' + artifactId;
             }

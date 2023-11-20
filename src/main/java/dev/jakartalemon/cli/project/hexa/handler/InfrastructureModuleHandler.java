@@ -19,8 +19,10 @@ import dev.jakartalemon.cli.model.BuildModel;
 import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.util.Constants;
 import dev.jakartalemon.cli.util.DependenciesUtil;
+import dev.jakartalemon.cli.util.DocumentXmlUtil;
 import dev.jakartalemon.cli.util.FileClassUtil;
 import dev.jakartalemon.cli.util.HttpClientUtil;
+import dev.jakartalemon.cli.util.JavaFileBuilder;
 import dev.jakartalemon.cli.util.JsonFileUtil;
 import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.Json;
@@ -29,10 +31,13 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -52,12 +57,18 @@ import static dev.jakartalemon.cli.util.Constants.JAKARTA_CDI_API_VERSION_KEY;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_ENTERPRISE;
 import static dev.jakartalemon.cli.util.Constants.JAR;
 import static dev.jakartalemon.cli.util.Constants.LOMBOK_DEPENDENCY;
+import static dev.jakartalemon.cli.util.Constants.MAIN;
+import static dev.jakartalemon.cli.util.Constants.MAPPER;
+import static dev.jakartalemon.cli.util.Constants.META_INF;
 import static dev.jakartalemon.cli.util.Constants.MOCKITO_DEPENDENCY;
+import static dev.jakartalemon.cli.util.Constants.MODEL;
 import static dev.jakartalemon.cli.util.Constants.ORG_MAPSTRUCT;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
 import static dev.jakartalemon.cli.util.Constants.PROJECT_GROUP_ID;
 import static dev.jakartalemon.cli.util.Constants.PROJECT_VERSION;
+import static dev.jakartalemon.cli.util.Constants.RESOURCES;
+import static dev.jakartalemon.cli.util.Constants.SRC;
 import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
 import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING_COMMA;
 import static dev.jakartalemon.cli.util.Constants.VERSION;
@@ -66,7 +77,6 @@ import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
 
 /**
- *
  * @author Diego Silva mailto:diego.silva@apuntesdejava.com
  */
 @Slf4j
@@ -94,8 +104,9 @@ public class InfrastructureModuleHandler {
         try {
             this.dataSourceName = "java:global/App/Datasource";
             List<String> lines = new ArrayList<>();
-            var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), INFRASTRUCTURE,
-                ADAPTERS);
+            var packageName
+                = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), INFRASTRUCTURE,
+                    ADAPTERS);
             lines.add(TEMPLATE_2_STRING_COMMA.formatted(PACKAGE, packageName));
             lines.add(EMPTY);
             lines.add("import jakarta.annotation.sql.DataSourceDefinition;");
@@ -108,7 +119,8 @@ public class InfrastructureModuleHandler {
             props.forEach(prop -> {
                 if (connectionInfo.containsKey(prop)) {
                     lines.add("%s%s = \"%s\",".formatted(StringUtils.repeat(SPACE,
-                        TAB_SIZE), prop, connectionInfo.getString(prop)));
+                        TAB_SIZE), prop,
+                        connectionInfo.getString(prop)));
                 }
             });
             removeLastComma(lines);
@@ -198,11 +210,13 @@ public class InfrastructureModuleHandler {
                                 .add(ARTIFACT_ID, "maven-compiler-plugin")
                                 .add(VERSION, "3.11.0")
                                 .add("configuration", Json.createObjectBuilder()
-                                    .add("annotationProcessorPaths", Json.createObjectBuilder()
-                                        .add("path", Json.createObjectBuilder()
-                                            .add(GROUP_ID, ORG_MAPSTRUCT)
-                                            .add(ARTIFACT_ID, "mapstruct-processor")
-                                            .add(VERSION, "${org.mapstruct.version}")))
+                                    .add("annotationProcessorPaths",
+                                        Json.createObjectBuilder()
+                                            .add("path", Json.createObjectBuilder()
+                                                .add(GROUP_ID, ORG_MAPSTRUCT)
+                                                .add(ARTIFACT_ID, "mapstruct-processor")
+                                                .add(VERSION,
+                                                    "${org.mapstruct.version}")))
                                 )
                         ).build()
                     ).build());
@@ -224,8 +238,60 @@ public class InfrastructureModuleHandler {
         return pomPath;
     }
 
+    public void createCdiDescriptor(String modulePath) {
+        try {
+            var xmlDocument = DocumentXmlUtil.newDocument("beans");
+            var documentElement = xmlDocument.getDocumentElement();
+            documentElement.setAttribute("xmlns", "http://java.sun.com/xml/ns/javaee");
+            documentElement.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+            documentElement.setAttribute("xsi:schemaLocation",
+                "http://java.sun.com/xml/ns/javaee http://java.sun"
+                + ".com/xml/ns/javaee/beans_1_0.xsd");
+            documentElement.setTextContent(SPACE);
+            var descriptorPath = Paths.get(modulePath, SRC, MAIN, RESOURCES, META_INF, "beans.xml");
+            Files.createDirectories(descriptorPath.getParent());
+            DocumentXmlUtil.saveDocument(descriptorPath, xmlDocument);
+        } catch (ParserConfigurationException | IOException e) {
+            log.error(e.getMessage(), e);
+        }
+    }
+
+    public void createMapper(String packageName,
+                             String infrastructurePath,
+                             String modelName,
+                             String entityName) {
+        try {
+            var classNameMapper = modelName + "Mapper";
+            var modelPackage = packageName + '.' + DOMAIN + '.' + MODEL + '.' + modelName;
+            var infrastructurePackage = packageName + '.' + INFRASTRUCTURE + '.' + ADAPTERS + '.' + ENTITIES + '.' + entityName;
+            var javaFileBuilder = new JavaFileBuilder().setClassName(classNameMapper)
+                .setPackage(packageName, INFRASTRUCTURE, MAPPER)
+                .isInterface(true)
+                .addVariableDeclaration(classNameMapper,
+                    "INSTANCE = Mappers.getMapper(%s.class)".formatted(classNameMapper), null)
+                .setModulePath(infrastructurePath)
+                .addClassAnnotation("Mapper")
+                .addImportClass("org.mapstruct.Mapper")
+                .addImportClass("org.mapstruct.factory.Mappers")
+                .addImportClass(modelPackage)
+                .addImportClass(infrastructurePackage)
+                .addMethod("entityToModel",
+                    Json.createObjectBuilder(
+                        Map.of(StringUtils.uncapitalize(entityName), entityName)
+                    ).build(), modelName, null)
+                .addMethod("modelToEntity", Json.createObjectBuilder(
+                    Map.of(StringUtils.uncapitalize(modelName), modelName)
+                ).build(), entityName, null);
+
+            javaFileBuilder.build();
+        } catch (IOException ex) {
+            log.error(ex.getMessage(), ex);
+        }
+    }
+
     private static class InfrastructureModuleHandlerHolder {
 
-        private static final InfrastructureModuleHandler INSTANCE = new InfrastructureModuleHandler();
+        private static final InfrastructureModuleHandler INSTANCE
+            = new InfrastructureModuleHandler();
     }
 }

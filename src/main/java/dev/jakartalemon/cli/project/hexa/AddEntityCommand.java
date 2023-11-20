@@ -18,6 +18,7 @@ package dev.jakartalemon.cli.project.hexa;
 import dev.jakartalemon.cli.project.hexa.handler.InfrastructureModuleHandler;
 import dev.jakartalemon.cli.project.hexa.handler.JpaPersistenceHandler;
 import dev.jakartalemon.cli.util.JsonFileUtil;
+import jakarta.json.JsonObject;
 import jakarta.json.JsonValue;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
@@ -26,6 +27,9 @@ import java.io.File;
 import java.util.concurrent.Callable;
 
 import static dev.jakartalemon.cli.util.Constants.ENTITIES;
+import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
+import static dev.jakartalemon.cli.util.Constants.MAP_TO_MODEL;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
@@ -45,27 +49,71 @@ public class AddEntityCommand implements Callable<Integer> {
     )
     private File file;
 
-    public AddEntityCommand() {
-
-    }
-
     @Override
     public Integer call() throws Exception {
+
+        return JsonFileUtil.getFileJson(file.toPath())
+            .map(
+                structure -> JsonFileUtil.getProjectInfo().map(
+                    projectInfo -> createEntitiesWithDefinition(structure, projectInfo)
+                ).orElse(1)
+            ).orElse(2);
+    }
+
+    private int createEntitiesWithDefinition(JsonObject structure,
+                                             JsonObject projectInfo) {
         var infrastructureModuleHandler = InfrastructureModuleHandler.getInstance();
         infrastructureModuleHandler.createDatabaseConfig(file);
         var jpaPersistenceHandler = JpaPersistenceHandler.getInstance();
-        return JsonFileUtil.getFileJson(file.toPath())
-            .map(structure -> JsonFileUtil.getProjectInfo().map(projectInfo -> {
-            structure.getJsonArray(ENTITIES).stream()
-                .map(JsonValue::asJsonObject)
-                .forEach(item -> item.forEach(
-                (key, classDef) -> jpaPersistenceHandler.createEntityClass(projectInfo, key,
-                    classDef.asJsonObject())));
-            jpaPersistenceHandler.createPersistenceUnit(infrastructureModuleHandler.
-                getDataSourceName());
-            jpaPersistenceHandler.savePersistenceXml();
-            return 0;
-        }).orElse(1)).orElse(2);
+        var persistenceUnitName = "persistenceUnit";
+        structure.getJsonArray(ENTITIES).stream()
+            .map(JsonValue::asJsonObject)
+            .forEach(item -> item.forEach(
+            (key, classDef) -> {
+                var definition = classDef.asJsonObject();
+                createEntity(definition, infrastructureModuleHandler,
+                    jpaPersistenceHandler, projectInfo, key);
+                if (definition.containsKey(MAP_TO_MODEL)) {
+                    var mapToModel = definition.getString(MAP_TO_MODEL);
+                    createRepository(key, mapToModel, projectInfo);
+                }
+            }));
+        jpaPersistenceHandler.createPersistenceUnit(infrastructureModuleHandler.
+            getDataSourceName(), persistenceUnitName);
+        jpaPersistenceHandler.savePersistenceXml();
+
+        jpaPersistenceHandler.createEntityManagerProvider(projectInfo, persistenceUnitName);
+
+        infrastructureModuleHandler.createCdiDescriptor(projectInfo.getString(INFRASTRUCTURE));
+        return 0;
+    }
+
+    private void createRepository(String entityName,
+                                  String modelName,
+                                  JsonObject projectInfo) {
+        var packageName = projectInfo.getString(PACKAGE);
+        var infrastructurePath = projectInfo.getString(INFRASTRUCTURE);
+        JpaPersistenceHandler.createRepositoryImplementation(modelName, packageName,
+                                                             infrastructurePath);
+
+    }
+
+    private void createEntity(JsonObject definition,
+                              InfrastructureModuleHandler infrastructureModuleHandler,
+                              JpaPersistenceHandler jpaPersistenceHandler,
+                              JsonObject projectInfo,
+                              String key) {
+
+        jpaPersistenceHandler.createEntityClass(projectInfo, key, definition);
+        if (definition.containsKey(MAP_TO_MODEL)) {
+            infrastructureModuleHandler.createMapper(
+                projectInfo.getString(PACKAGE),
+                projectInfo.getString(INFRASTRUCTURE),
+                definition.getString(MAP_TO_MODEL),
+                key
+            );
+        }
+
     }
 
 }

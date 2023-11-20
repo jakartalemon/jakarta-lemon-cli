@@ -15,43 +15,21 @@
  */
 package dev.jakartalemon.cli.project.hexa.handler;
 
-import static dev.jakartalemon.cli.util.Constants.ADAPTERS;
-import static dev.jakartalemon.cli.util.Constants.ANNOTATION_PROPS;
-import static dev.jakartalemon.cli.util.Constants.BOOLEAN_TYPE;
-import static dev.jakartalemon.cli.util.Constants.COLUMN_ANNOTATION;
-import static dev.jakartalemon.cli.util.Constants.ENTITIES;
-import static dev.jakartalemon.cli.util.Constants.FIELDS;
-import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
-import static dev.jakartalemon.cli.util.Constants.INTEGER_TYPE;
-import static dev.jakartalemon.cli.util.Constants.JAKARTA_LEMON_CONFIG_URL;
-import static dev.jakartalemon.cli.util.Constants.JOIN_COLUMN_ANNOTATION;
-import static dev.jakartalemon.cli.util.Constants.MAIN;
-import static dev.jakartalemon.cli.util.Constants.MANY_TO_ONE;
-import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_PERSISTENCE_API;
-import static dev.jakartalemon.cli.util.Constants.NAME;
-import static dev.jakartalemon.cli.util.Constants.ONE_TO_ONE;
-import static dev.jakartalemon.cli.util.Constants.PACKAGE;
-import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
-import static dev.jakartalemon.cli.util.Constants.PRIMARY_KEY;
-import static dev.jakartalemon.cli.util.Constants.RESOURCES;
-import static dev.jakartalemon.cli.util.Constants.SLASH;
-import static dev.jakartalemon.cli.util.Constants.SRC;
-import static dev.jakartalemon.cli.util.Constants.STRING_TYPE;
-import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
-import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING_COMMA;
-import static dev.jakartalemon.cli.util.Constants.TYPE;
-import static dev.jakartalemon.cli.util.Constants.VERSION;
-import static dev.jakartalemon.cli.util.Constants.XMLNS;
-import static dev.jakartalemon.cli.util.Constants.XMLNS_XSI;
-import static dev.jakartalemon.cli.util.Constants.XMLNS_XSI_INSTANCE;
 import dev.jakartalemon.cli.util.DependenciesUtil;
 import dev.jakartalemon.cli.util.DocumentXmlUtil;
 import dev.jakartalemon.cli.util.FileClassUtil;
 import dev.jakartalemon.cli.util.HttpClientUtil;
-import static dev.jakartalemon.cli.util.LinesUtils.removeLastComma;
 import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -59,13 +37,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPathExpressionException;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
+
+import dev.jakartalemon.cli.util.JavaFileBuilder;
+
+import static dev.jakartalemon.cli.util.Constants.*;
+import static dev.jakartalemon.cli.util.LinesUtils.removeLastComma;
+import static javax.xml.xpath.XPathConstants.NODESET;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
-import org.w3c.dom.Document;
 
 /**
  *
@@ -86,6 +65,26 @@ public class JpaPersistenceHandler {
 
     public static JpaPersistenceHandler getInstance() {
         return JpaPersistenceHandlerHolder.INSTANCE;
+    }
+
+    public static void createRepositoryImplementation(String modelName,
+                                                      String packageName,
+                                                      String infrastructurePath) {
+        var importClass = "%s.%s.%s.%sRepository".formatted(packageName, DOMAIN, REPOSITORY, modelName);
+        try {
+            var javaFileBuilder = new JavaFileBuilder()
+                .setClassName(modelName + "RepositoryImpl")
+                .setPackage(packageName, INFRASTRUCTURE, REPOSITORY)
+                .setModulePath(infrastructurePath)
+                .addImportClass(importClass)
+                .addImportClass("jakarta.inject.Inject")
+                .addImportClass("jakarta.persistence.EntityManager")
+                .addVariableDeclaration("EntityManager","em","Inject")
+                .addImplementationInterface(modelName + "Repository");
+            javaFileBuilder.build();
+        } catch (IOException ex) {
+            log.error(ex.getMessage(), ex);
+        }
     }
 
     private JsonObject columnAnnotationProperties;
@@ -156,10 +155,10 @@ public class JpaPersistenceHandler {
                 var hasAssociation = checkAssociation(lines, definitionValue);
                 if (hasAssociation) {
                     checkColumnDefinition(lines, definitionValue, JOIN_COLUMN_ANNOTATION,
-                                          joinColumnAnnotationProperties);
+                        joinColumnAnnotationProperties);
                 } else {
                     checkColumnDefinition(lines, definitionValue, COLUMN_ANNOTATION,
-                                          columnAnnotationProperties);
+                        columnAnnotationProperties);
                 }
                 lines.add("%sprivate %s %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE), type,
                     fieldName));
@@ -264,16 +263,46 @@ public class JpaPersistenceHandler {
         DocumentXmlUtil.saveDocument(persistenceXmlPath, persistenceXml);
     }
 
-    public void createPersistenceUnit(String dataSourceName) {
+    public void createPersistenceUnit(String dataSourceName,
+                                      String persistenceUnitName) {
         try {
-            DocumentXmlUtil.createElement(persistenceXml, "/persistence", "persistence-unit")
-                .ifPresent(persistenceUnitElement -> {
-                    persistenceUnitElement.setAttribute(NAME, "persistenceUnit");
-                    DocumentXmlUtil.createElement(persistenceXml, persistenceUnitElement,
-                        "jta-data-source", dataSourceName);
-                });
+            var xPath = XPathFactory.newInstance().newXPath();
+            var persistenceUnitExp = "/persistence/persistence-unit[@name='%s']".
+                formatted(persistenceUnitName);
+            var searchResult = (NodeList) xPath.compile(persistenceUnitExp).evaluate(persistenceXml,
+                NODESET);
+            if (searchResult.getLength() == 0) {
+
+                DocumentXmlUtil.createElement(persistenceXml, "/persistence", "persistence-unit")
+                    .ifPresent(persistenceUnitElement -> {
+                        persistenceUnitElement.setAttribute(NAME, persistenceUnitName);
+                        DocumentXmlUtil.createElement(persistenceXml, persistenceUnitElement,
+                            "jta-data-source", dataSourceName);
+                    });
+            }
         } catch (XPathExpressionException e) {
             log.error(e.getMessage(), e);
+        }
+    }
+
+    public void createEntityManagerProvider(JsonObject projectInfo,
+                                            String persistenceUnitName) {
+        try {
+            var javaFileBuilder = new JavaFileBuilder()
+                .setModulePath(projectInfo.getString(INFRASTRUCTURE))
+                .setPackage(projectInfo.getString(PACKAGE), INFRASTRUCTURE, ADAPTERS)
+                .addClassAnnotation("ApplicationScoped")
+                .addImportClass("jakarta.enterprise.context.ApplicationScoped")
+                .addImportClass("jakarta.enterprise.inject.Produces")
+                .addImportClass("jakarta.persistence.PersistenceContext")
+                .addImportClass("jakarta.persistence.EntityManager")
+                .setClassName("JpaProvider")
+                .addVariableDeclaration("EntityManager", "em",
+                    "Produces @PersistenceContext(unitName = \"%s\")".formatted(
+                        persistenceUnitName));
+            javaFileBuilder.build();
+        } catch (IOException ex) {
+            log.error(ex.getMessage(), ex);
         }
     }
 
