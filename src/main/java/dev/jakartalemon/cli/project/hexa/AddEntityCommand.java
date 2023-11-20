@@ -70,9 +70,13 @@ public class AddEntityCommand implements Callable<Integer> {
             .map(JsonValue::asJsonObject)
             .forEach(item -> item.forEach(
             (key, classDef) -> {
-                createEntity(classDef, infrastructureModuleHandler,
+                var definition = classDef.asJsonObject();
+                createEntity(definition, infrastructureModuleHandler,
                     jpaPersistenceHandler, projectInfo, key);
-                createRepository(key, infrastructureModuleHandler, projectInfo);
+                if (definition.containsKey(MAP_TO_MODEL)) {
+                    var mapToModel = definition.getString(MAP_TO_MODEL);
+                    createRepository(key, mapToModel, projectInfo);
+                }
             }));
         jpaPersistenceHandler.createPersistenceUnit(infrastructureModuleHandler.
             getDataSourceName(), persistenceUnitName);
@@ -85,17 +89,21 @@ public class AddEntityCommand implements Callable<Integer> {
     }
 
     private void createRepository(String entityName,
-                                  InfrastructureModuleHandler infrastructureModuleHandler,
+                                  String modelName,
                                   JsonObject projectInfo) {
+        var packageName = projectInfo.getString(PACKAGE);
+        var infrastructurePath = projectInfo.getString(INFRASTRUCTURE);
+        JpaPersistenceHandler.createRepositoryImplementation(modelName, packageName,
+                                                             infrastructurePath);
+
     }
 
-    private void createEntity(JsonValue classDef,
-                                InfrastructureModuleHandler infrastructureModuleHandler,
-                                JpaPersistenceHandler jpaPersistenceHandler,
-                                JsonObject projectInfo,
-                                String key) {
+    private void createEntity(JsonObject definition,
+                              InfrastructureModuleHandler infrastructureModuleHandler,
+                              JpaPersistenceHandler jpaPersistenceHandler,
+                              JsonObject projectInfo,
+                              String key) {
 
-        var definition = classDef.asJsonObject();
         jpaPersistenceHandler.createEntityClass(projectInfo, key, definition);
         if (definition.containsKey(MAP_TO_MODEL)) {
             infrastructureModuleHandler.createMapper(

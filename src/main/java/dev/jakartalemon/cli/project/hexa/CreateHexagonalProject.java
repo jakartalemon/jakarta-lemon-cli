@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static dev.jakartalemon.cli.project.constants.Archetype.HEXA;
+import static dev.jakartalemon.cli.util.Constants.Archetype.HEXA;
 import static dev.jakartalemon.cli.util.Constants.APPLICATION;
 import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
 import static dev.jakartalemon.cli.util.Constants.DOMAIN;

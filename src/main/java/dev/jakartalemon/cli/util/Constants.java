@@ -186,4 +186,12 @@ public class Constants {
     private Constants() {
     }
 
+    /**
+     *
+     * @author Diego Silva <diego.silva at apuntesdejava.com>
+     */
+    public enum Archetype {
+        MVC, HEXA, REST, JSF
+    }
+
 }

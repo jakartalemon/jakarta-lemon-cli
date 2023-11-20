@@ -44,6 +44,9 @@ import static dev.jakartalemon.cli.util.Constants.PUBLIC;
 import static dev.jakartalemon.cli.util.Constants.RETURN;
 import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
 import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING;
+
+import java.util.Map.Entry;
+
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
 
@@ -52,21 +55,20 @@ import static org.apache.commons.lang3.StringUtils.SPACE;
  */
 public class JavaFileBuilder {
 
-    private String packageValue;
     private final Set<String> importsList = new HashSet<>();
     private final List<String> classAnnotationsList = new ArrayList<>();
+    private final List<String> interfacesList = new ArrayList<>();
     private final List<String> variablesList = new ArrayList<>();
     private final List<String> methodsList = new ArrayList<>();
     private final Set<String[]> constructorsVariablesSet = new LinkedHashSet<>();
+    private final Map<String, String> importablesMap;
+    private String packageValue;
     private String className;
     private String modulePath;
     private String resource;
-
     private String packageName;
     private String extendClass;
-
     private boolean isInterface;
-    private final Map<String, String> importablesMap;
 
     public JavaFileBuilder() {
         importablesMap = HttpClientUtil.getConfigs(Constants.IMPORTABLES);
@@ -99,6 +101,11 @@ public class JavaFileBuilder {
 
     public JavaFileBuilder setExtendClass(String extendClass) {
         this.extendClass = extendClass;
+        return this;
+    }
+
+    public JavaFileBuilder addImplementationInterface(String implementationInterface) {
+        this.interfacesList.add(implementationInterface);
         return this;
     }
 
@@ -176,11 +183,14 @@ public class JavaFileBuilder {
         lines.add(StringUtils.EMPTY);
         lines.addAll(classAnnotationsList.stream().map(annotation -> '@' + annotation).toList());
         var classDeclaration = isInterface ? "interface" : "class";
+        var implementations = interfacesList.isEmpty()
+                          ? EMPTY
+                          : (" implements %s ".formatted(String.join(COMMA_SPACE, interfacesList)));
         if (StringUtils.isBlank(extendClass)) {
-            lines.add("public %s %s {".formatted(classDeclaration, className));
+            lines.add("public %s %s %s{".formatted(classDeclaration, className, implementations));
         } else {
-            lines.add("public %s %s extends %s {".formatted(classDeclaration, className,
-                extendClass));
+            lines.add("public %s %s extends %s %s{".formatted(classDeclaration, className,
+                extendClass, implementations));
         }
         lines.add(StringUtils.EMPTY);
         lines.addAll(variablesList);
@@ -214,6 +224,29 @@ public class JavaFileBuilder {
         return EMPTY;
     }
 
+    private String implementObjectType(Entry<String, JsonValue> param,
+                                       List<String> annotations,
+                                       String paramType) {
+        var detailParam = param.getValue().asJsonObject();
+        if (detailParam.containsKey(OPEN_API_IN)) {
+            var inParam = detailParam.getString(OPEN_API_IN);
+            if (inParam.equals(OPEN_API_IN_PATH)) {
+                annotations.add(
+                    "Path(\"%s\")".formatted(detailParam.getString(PATH_PARAM)));
+                addImportClass("jakarta.ws.rs.PathParam");
+                var paramDeclaration
+                    = "@PathParam(\"%s\") %s".formatted(param.getKey(), paramType);
+                return TEMPLATE_2_STRING.formatted(paramDeclaration, param.getKey());
+            }
+        }
+        if (detailParam.containsKey(ANNOTATION_FIELD)) {
+            var paramDeclaration
+                = "@%s %s".formatted(detailParam.getString(ANNOTATION_FIELD), paramType);
+            return TEMPLATE_2_STRING.formatted(paramDeclaration, param.getKey());
+        }
+        return EMPTY;
+    }
+
     public JavaFileBuilder addMethod(String methodName,
                                      JsonObject params,
                                      String returnValue,
@@ -227,23 +260,7 @@ public class JavaFileBuilder {
                 addImportClass(paramType);
             }
             if (param.getValue().getValueType() == JsonValue.ValueType.OBJECT) {
-                var detailParam = param.getValue().asJsonObject();
-                if (detailParam.containsKey(OPEN_API_IN)) {
-                    var inParam = detailParam.getString(OPEN_API_IN);
-                    if (inParam.equals(OPEN_API_IN_PATH)) {
-                        annotations.add(
-                            "Path(\"%s\")".formatted(detailParam.getString(PATH_PARAM)));
-                        addImportClass("jakarta.ws.rs.PathParam");
-                        var paramDeclaration
-                            = "@PathParam(\"%s\") %s".formatted(param.getKey(), paramType);
-                        return TEMPLATE_2_STRING.formatted(paramDeclaration, param.getKey());
-                    }
-                }
-                if (detailParam.containsKey(ANNOTATION_FIELD)) {
-                    var paramDeclaration
-                        = "@%s %s".formatted(detailParam.getString(ANNOTATION_FIELD), paramType);
-                    return TEMPLATE_2_STRING.formatted(paramDeclaration, param.getKey());
-                }
+                return implementObjectType(param, annotations, paramType);
             }
             return TEMPLATE_2_STRING.formatted(paramType, param.getKey());
 
