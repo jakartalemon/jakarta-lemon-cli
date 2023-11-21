@@ -127,6 +127,8 @@ public class Constants {
         = "q=g:fish.payara.extras+AND+a:payara-micro";
     public static final String MAVEN_QUERY_PERSISTENCE_API
         = "q=g:jakarta.persistence+AND+a:jakarta.persistence-api";
+    public static final String MAVEN_QUERY_TRANSACTION_API
+        = "q=g:jakarta.transaction+AND+a:jakarta.transaction-api";
     public static final String MAVEN_QUERY_JAKARTA_WS_RS_API
         = "q=g:jakarta.ws.rs+AND+a:jakarta.ws.rs-api";
     public static final String MAVEN_QUERY_RXJAVA

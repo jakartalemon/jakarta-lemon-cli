@@ -79,7 +79,7 @@ public class JpaPersistenceHandler {
                 .addImportClass(importClass)
                 .addImportClass("jakarta.inject.Inject")
                 .addImportClass("jakarta.persistence.EntityManager")
-                .addVariableDeclaration("EntityManager","em","Inject")
+                .addVariableDeclaration("EntityManager", "em", "Inject")
                 .addImplementationInterface(modelName + "Repository");
             javaFileBuilder.build();
         } catch (IOException ex) {
@@ -95,6 +95,7 @@ public class JpaPersistenceHandler {
     private JpaPersistenceHandler() {
         try {
             addJpaDependency();
+            addTransactionApiDependency();
             readAnnotationsDefinitions();
             createPersistenceXml();
         } catch (InterruptedException | IOException | URISyntaxException ex) {
@@ -104,8 +105,11 @@ public class JpaPersistenceHandler {
 
     private void addJpaDependency() throws InterruptedException, IOException, URISyntaxException {
         DependenciesUtil.getLastVersionDependency(
-            MAVEN_QUERY_PERSISTENCE_API).ifPresent(dependency -> PomUtil.getInstance()
-            .addDependency(dependency, INFRASTRUCTURE));
+            MAVEN_QUERY_PERSISTENCE_API
+        ).ifPresent(
+            dependency -> PomUtil.getInstance()
+                .addDependency(dependency, INFRASTRUCTURE)
+        );
     }
 
     private boolean checkAssociation(List<String> lines,
@@ -304,6 +308,16 @@ public class JpaPersistenceHandler {
         } catch (IOException ex) {
             log.error(ex.getMessage(), ex);
         }
+    }
+
+    private void addTransactionApiDependency() throws URISyntaxException, IOException,
+                                                      InterruptedException {
+        DependenciesUtil.getLastVersionDependency(
+            MAVEN_QUERY_TRANSACTION_API
+        ).ifPresent(
+            dependency -> PomUtil.getInstance()
+                .addDependency(dependency, INFRASTRUCTURE)
+        );
     }
 
     private static class JpaPersistenceHandlerHolder {
