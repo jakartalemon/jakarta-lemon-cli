@@ -49,7 +49,7 @@
         <maven.compiler.release>17</maven.compiler.release>
         <info.picocli.version>4.7.5</info.picocli.version>
         <org.eclipse.yasson.version>3.0.3</org.eclipse.yasson.version>
-        <jaxb.impl.version>4.0.3</jaxb.impl.version>
+        <jaxb.impl.version>4.0.4</jaxb.impl.version>
         <app.main.class>dev.jakartalemon.cli.JakartaLemonCli</app.main.class>
     </properties>
     <build>
