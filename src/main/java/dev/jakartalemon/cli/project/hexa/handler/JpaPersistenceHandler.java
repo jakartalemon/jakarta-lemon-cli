@@ -234,7 +234,7 @@ public class JpaPersistenceHandler {
 
     private void createPersistenceXml() {
         try {
-            this.persistenceXmlPath = Paths.get(DOT, INFRASTRUCTURE, SRC, MAIN, RESOURCES,META_INF,
+            this.persistenceXmlPath = Paths.get(DOT, INFRASTRUCTURE, SRC, MAIN, RESOURCES, META_INF,
                 PERSISTENCE_FILE_NAME).
                 normalize();
             Files.createDirectories(persistenceXmlPath.getParent());
@@ -282,6 +282,15 @@ public class JpaPersistenceHandler {
                         persistenceUnitElement.setAttribute(NAME, persistenceUnitName);
                         DocumentXmlUtil.createElement(persistenceXml, persistenceUnitElement,
                             "jta-data-source", dataSourceName);
+                        DocumentXmlUtil.createElement(persistenceXml, persistenceUnitElement,
+                            "properties").flatMap(propertiesElement -> DocumentXmlUtil.
+                            createElement(persistenceXml,
+                                propertiesElement, "property"))
+                            .ifPresent(propertyElement -> {
+                                propertyElement.setAttribute("name",
+                                    "jakarta.persistence.schema-generation.database.action");
+                                propertyElement.setAttribute("value", "create");
+                            });
                     });
             }
         } catch (XPathExpressionException e) {
