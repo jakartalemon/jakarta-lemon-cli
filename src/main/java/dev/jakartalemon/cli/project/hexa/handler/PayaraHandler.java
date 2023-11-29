@@ -51,6 +51,9 @@ public class PayaraHandler {
         PomUtil.getInstance()
             .addProperty(Json.createObjectBuilder()
                 .add("payara.version", payaraVersion)
+                .build());
+        PomUtil.getInstance()
+            .addProperty(Json.createObjectBuilder()
                 .add(MAVEN_COMPILER_RELEASE, JAVA_VERSION)
                 .build(), APPLICATION
             )
