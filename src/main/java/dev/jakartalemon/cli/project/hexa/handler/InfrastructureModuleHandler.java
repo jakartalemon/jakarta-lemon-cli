@@ -17,7 +17,6 @@ package dev.jakartalemon.cli.project.hexa.handler;
 
 import dev.jakartalemon.cli.model.BuildModel;
 import dev.jakartalemon.cli.model.PomModel;
-import dev.jakartalemon.cli.util.Constants;
 import dev.jakartalemon.cli.util.DependenciesUtil;
 import dev.jakartalemon.cli.util.DocumentXmlUtil;
 import dev.jakartalemon.cli.util.FileClassUtil;
@@ -72,7 +71,6 @@ import static dev.jakartalemon.cli.util.Constants.SRC;
 import static dev.jakartalemon.cli.util.Constants.TAB_SIZE;
 import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING_COMMA;
 import static dev.jakartalemon.cli.util.Constants.VERSION;
-import static dev.jakartalemon.cli.util.LinesUtils.removeLastComma;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.SPACE;
 
@@ -82,7 +80,6 @@ import static org.apache.commons.lang3.StringUtils.SPACE;
 @Slf4j
 public class InfrastructureModuleHandler {
 
-    private final Map<String, String> importablesMap;
     private final JsonObject databasesConfigs;
 
     private final List<String> props = List.of("url", "password", "user");
@@ -90,7 +87,6 @@ public class InfrastructureModuleHandler {
     private String dataSourceName;
 
     private InfrastructureModuleHandler() {
-        importablesMap = HttpClientUtil.getConfigs(Constants.IMPORTABLES);
         databasesConfigs = HttpClientUtil.getDatabasesConfigs().orElseThrow();
     }
 
@@ -123,7 +119,8 @@ public class InfrastructureModuleHandler {
                         connectionInfo.getString(prop)));
                 }
             });
-            removeLastComma(lines);
+            lines.add("%sproperties = {\"fish.payara.log-jdbc-calls=true\"}".formatted(StringUtils.
+                repeat(SPACE, TAB_SIZE)));
 
             lines.add(")");
             var className = "DataSourceProvider";
