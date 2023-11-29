@@ -42,22 +42,24 @@ paths:
                 items:
                   $ref: '#/components/schemas/Bank'
 
-  /accounts:
+  /persons:
     post:
-      operationId: createAccount
+      operationId: createPerson
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AccountRequest'
+              $ref: '#/components/schemas/PersonRequest'
+    get:
+      operationId: personsList
       responses:
-        '201':
-          description: Register account information
+        '200':
+          description: "Gets persons list"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AccountResponse'
+                $ref: '#/components/schemas/PersonResponse'
 components:
   schemas:
     AccountResponse:
@@ -85,10 +87,25 @@ components:
       properties:
         dni:
           type: string
+          examples: ["10203040"]
         firstName:
           type: string
+          examples: ["John"]
         lastName:
           type: string
+          examples: ["Doe"]
+    PersonRequest:
+      type: object
+      properties:
+        dni:
+          type: string
+          examples: ["10203040"]
+        firstName:
+          type: string
+          examples: ["John"]
+        lastName:
+          type: string
+          examples: ["Doe"]
         birthdate:
           type: string
-          format: date
+          examples: ["2000-01-01"]

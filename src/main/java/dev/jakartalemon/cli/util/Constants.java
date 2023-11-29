@@ -113,6 +113,7 @@ public class Constants {
         VERSION, PROJECT_VERSION
     );
     public static final String DOCS = "docs";
+    public static final String DOT = ".";
     public static final String DEPENDENCY_GROUP_ID = "groupId";
     public static final String DEPENDENCY_ARTIFACT_ID = "artifactId";
     public static final String DEPENDENCY_VERSION = "version";

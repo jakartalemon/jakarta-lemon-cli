@@ -33,6 +33,7 @@ import java.util.Optional;
 
 import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
 import static dev.jakartalemon.cli.util.Constants.DEPENDENCY;
+import static dev.jakartalemon.cli.util.Constants.DOT;
 import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
 import static dev.jakartalemon.cli.util.Constants.PLUGIN;
 import static dev.jakartalemon.cli.util.Constants.POM_XML;
@@ -163,7 +164,7 @@ public class PomUtil {
 
     public void addPlugin(JsonObject plugin,
                           String... paths) {
-        var pathXml = Path.of(".", paths).resolve(POM_XML);
+        var pathXml = Path.of(DOT, paths).resolve(POM_XML);
         DocumentXmlUtil.openDocument(pathXml)
             .ifPresent(documentXml -> {
                 try {
@@ -188,7 +189,7 @@ public class PomUtil {
 
     public void addDependency(JsonObject dependency,
                               String... paths) {
-        var pathXml = Path.of(".", paths).resolve(POM_XML);
+        var pathXml = Path.of(DOT, paths).resolve(POM_XML);
 
         DocumentXmlUtil.openDocument(pathXml)
             .ifPresent(documentXml -> {
@@ -220,7 +221,7 @@ public class PomUtil {
 
     public PomUtil addProperty(JsonObject property,
                                String... paths) {
-        var pathXml = Path.of(".", paths).resolve(POM_XML);
+        var pathXml = Path.of(DOT, paths).resolve(POM_XML);
 
         DocumentXmlUtil.openDocument(pathXml)
             .ifPresent(documentXml -> {

@@ -137,7 +137,7 @@ public class JpaPersistenceHandler {
             log.debug("classDefinition:{}", jsonObject);
             List<String> lines = new ArrayList<>();
             var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), INFRASTRUCTURE,
-                ADAPTERS) + "." + ENTITIES;
+                ADAPTERS) + DOT + ENTITIES;
             lines.add(TEMPLATE_2_STRING_COMMA.formatted(PACKAGE, packageName));
             lines.add(EMPTY);
             lines.add("import jakarta.persistence.Entity;");
@@ -234,7 +234,7 @@ public class JpaPersistenceHandler {
 
     private void createPersistenceXml() {
         try {
-            this.persistenceXmlPath = Paths.get(".", INFRASTRUCTURE, SRC, MAIN, RESOURCES,
+            this.persistenceXmlPath = Paths.get(DOT, INFRASTRUCTURE, SRC, MAIN, RESOURCES,META_INF,
                 PERSISTENCE_FILE_NAME).
                 normalize();
             Files.createDirectories(persistenceXmlPath.getParent());
