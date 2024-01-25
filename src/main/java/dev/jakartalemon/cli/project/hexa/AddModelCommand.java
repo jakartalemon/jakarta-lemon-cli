@@ -49,11 +49,9 @@ public class AddModelCommand implements Callable<Integer> {
         var domainModuleHandler = DomainModuleHandler.getInstance();
         return JsonFileUtil.getFileJson(file.toPath())
             .map(structure -> JsonFileUtil.getProjectInfo().map(projectInfo -> {
-            var repositoryPath = domainModuleHandler.createRepository(projectInfo);
             structure.forEach(
                 (key, classDef) -> domainModuleHandler.createClass(projectInfo, key, classDef.
-                    asJsonObject(),
-                    repositoryPath.orElseThrow()));
+                    asJsonObject()));
             return 0;
         }).orElse(1)).orElse(2);
 

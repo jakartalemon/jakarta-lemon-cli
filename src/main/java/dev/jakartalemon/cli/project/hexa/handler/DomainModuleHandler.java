@@ -15,43 +15,72 @@
  */
 package dev.jakartalemon.cli.project.hexa.handler;
 
+import com.camucode.gen.DefinitionBuilder;
+import com.camucode.gen.DefinitionBuilderWithMethods;
+import com.camucode.gen.FieldDefinitionBuilder;
+import com.camucode.gen.MethodDefinitionBuilder;
+import com.camucode.gen.type.ClassType;
+import com.camucode.gen.type.ClassTypeBuilder;
+import com.camucode.gen.values.Modifier;
 import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.project.hexa.AddModelCommand;
 import dev.jakartalemon.cli.util.Constants;
 import dev.jakartalemon.cli.util.FileClassUtil;
 import dev.jakartalemon.cli.util.HttpClientUtil;
+import dev.jakartalemon.cli.util.JavaFileBuilder;
 import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonString;
+import jakarta.json.JsonValue;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import jakarta.json.JsonString;
-import jakarta.json.JsonValue;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-
-import static dev.jakartalemon.cli.util.Constants.*;
-
-import dev.jakartalemon.cli.util.JavaFileBuilder;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-
-import java.nio.file.Files;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
+import static dev.jakartalemon.cli.util.Constants.CLASSES_IMPORT_TEST;
+import static dev.jakartalemon.cli.util.Constants.COLON;
+import static dev.jakartalemon.cli.util.Constants.DOMAIN;
+import static dev.jakartalemon.cli.util.Constants.DOT;
+import static dev.jakartalemon.cli.util.Constants.FIELDS;
+import static dev.jakartalemon.cli.util.Constants.FINDERS;
+import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
+import static dev.jakartalemon.cli.util.Constants.INJECTS;
+import static dev.jakartalemon.cli.util.Constants.JAR;
+import static dev.jakartalemon.cli.util.Constants.JAVA;
+import static dev.jakartalemon.cli.util.Constants.JAVA_VERSION;
+import static dev.jakartalemon.cli.util.Constants.LOMBOK_DEPENDENCY;
+import static dev.jakartalemon.cli.util.Constants.MAIN;
+import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_RELEASE;
+import static dev.jakartalemon.cli.util.Constants.MOCKITO_DEPENDENCY;
+import static dev.jakartalemon.cli.util.Constants.MODEL;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
+import static dev.jakartalemon.cli.util.Constants.PARAMETERS;
+import static dev.jakartalemon.cli.util.Constants.PRIMARY_KEY;
+import static dev.jakartalemon.cli.util.Constants.REPOSITORY;
+import static dev.jakartalemon.cli.util.Constants.RETURN;
+import static dev.jakartalemon.cli.util.Constants.SRC;
+import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING_COMMA;
+import static dev.jakartalemon.cli.util.Constants.TEST;
+import static dev.jakartalemon.cli.util.Constants.USECASE;
+import static dev.jakartalemon.cli.util.Constants.VERSION;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.SPACE;
 
 /**
  * @author Diego Silva mailto:diego.silva@apuntesdejava.com
@@ -59,8 +88,55 @@ import static org.apache.commons.lang3.StringUtils.SPACE;
 @Slf4j
 public class DomainModuleHandler {
 
+    private static final String[] PRIMITIVE_TYPES = {
+        "byte", "Byte",
+        "short", "Short",
+        "int", "Integer",
+        "long", "Long",
+        "float", "Float",
+        "double", "Double",
+        "boolean", "Boolean",
+        "char", "Character",
+        "String",
+    };
+
     public static DomainModuleHandler getInstance() {
         return DomainModuleHandlerHolder.INSTANCE;
+    }
+
+    public static Optional<Path> createDomainModule(Path projectPath,
+                                                    String groupId,
+                                                    String artifactId,
+                                                    String version,
+                                                    String packageName) {
+
+        var modulePom = PomModel.builder().parent(Map.of(
+            GROUP_ID, groupId,
+            ARTIFACT_ID, artifactId,
+            VERSION, version
+        )).packaging(JAR).dependencies(List.of(
+            LOMBOK_DEPENDENCY, MOCKITO_DEPENDENCY
+        )).properties(Map.of(
+            MAVEN_COMPILER_RELEASE, JAVA_VERSION
+        )).artifactId(DOMAIN);
+
+        var pomPath = PomUtil.getInstance().createPom(
+            projectPath.resolve(DOMAIN), modulePom.build()
+        );
+        pomPath.ifPresent(pom -> {
+            log.debug("domain created at {}", pom);
+            var parent = pom.getParent();
+            FileClassUtil.createJavaProjectStructure(parent, PACKAGE_TEMPLATE.formatted(
+                packageName, DOMAIN, REPOSITORY));
+            FileClassUtil
+                .createJavaProjectStructure(parent,
+                    PACKAGE_TEMPLATE.formatted(packageName, DOMAIN, MODEL));
+            FileClassUtil.
+                createJavaProjectStructure(parent,
+                    PACKAGE_TEMPLATE.formatted(packageName, DOMAIN,
+                        USECASE));
+        });
+        return pomPath;
     }
 
     private final Map<String, String> importablesMap;
@@ -97,41 +173,6 @@ public class DomainModuleHandler {
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }
-    }
-
-    public static Optional<Path> createDomainModule(Path projectPath,
-                                                    String groupId,
-                                                    String artifactId,
-                                                    String version,
-                                                    String packageName) {
-
-        var modulePom = PomModel.builder().parent(Map.of(
-            GROUP_ID, groupId,
-            ARTIFACT_ID, artifactId,
-            VERSION, version
-        )).packaging(JAR).dependencies(List.of(
-            LOMBOK_DEPENDENCY, MOCKITO_DEPENDENCY
-        )).properties(Map.of(
-            MAVEN_COMPILER_RELEASE, JAVA_VERSION
-        )).artifactId(DOMAIN);
-
-        var pomPath = PomUtil.getInstance().createPom(
-            projectPath.resolve(DOMAIN), modulePom.build()
-        );
-        pomPath.ifPresent(pom -> {
-            log.debug("domain created at {}", pom);
-            var parent = pom.getParent();
-            FileClassUtil.createJavaProjectStructure(parent, PACKAGE_TEMPLATE.formatted(
-                packageName, DOMAIN, REPOSITORY));
-            FileClassUtil
-                .createJavaProjectStructure(parent,
-                    PACKAGE_TEMPLATE.formatted(packageName, DOMAIN, MODEL));
-            FileClassUtil.
-                createJavaProjectStructure(parent,
-                    PACKAGE_TEMPLATE.formatted(packageName, DOMAIN,
-                        USECASE));
-        });
-        return pomPath;
     }
 
     private List<String> getClassesInject(JsonObject projectInfo,
@@ -228,53 +269,54 @@ public class DomainModuleHandler {
 
     }
 
-    public void createClass(JsonObject projectInfo,
-                            String className,
-                            JsonObject classDef,
-                            Path repositoryPath) {
+    public void createClass(JsonObject projectInfo, String className, JsonObject classDef) {
 
         try {
             log.info("Creating {} class", className);
-            var javaFileBuilder = new JavaFileBuilder();
-            javaFileBuilder.setPackage(projectInfo.getString(PACKAGE), DOMAIN, MODEL)
-                .addImportClass("lombok.Getter")
-                .addImportClass("lombok.Setter")
-                .addImportClass("lombok.Builder")
-                .addImportClass("lombok.AllArgsConstructor")
-                .addImportClass("lombok.NoArgsConstructor")
-                .addClassAnnotation("Setter")
-                .addClassAnnotation("Getter")
-                .addClassAnnotation("Builder")
-                .addClassAnnotation("AllArgsConstructor")
-                .addClassAnnotation("NoArgsConstructor")
-                .setClassName(className);
             AtomicReference<String> primaryKeyTypeRef = new AtomicReference<>();
-
-            var fieldsDef = classDef.getJsonObject(FIELDS);
-            //creating fields
-            fieldsDef.keySet().forEach(field -> {
-                var classTypeValue = fieldsDef.get(field);
-                String classType = EMPTY;
-                if (classTypeValue.getValueType() == JsonValue.ValueType.STRING) {
-                    classType = fieldsDef.getString(field);
-
-                } else if (classTypeValue.getValueType() == JsonValue.ValueType.OBJECT) {
-                    var classObjectDef = classTypeValue.asJsonObject();
-                    var primaryKey = classObjectDef.getBoolean("primaryKey", false);
-                    classType = classObjectDef.getString("type");
-                    if (primaryKey) {
-                        primaryKeyTypeRef.set(classType);
+            var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, MODEL);
+            var fields = classDef.getJsonObject(FIELDS)
+                .entrySet()
+                .stream()
+                .map(entry -> {
+                    var fieldName = entry.getKey();
+                    var fieldType = getType(entry.getValue());
+                    var fieldDefinitionBuilder = FieldDefinitionBuilder.createBuilder()
+                        .fieldName(fieldName)
+                        .addModifier(Modifier.PRIVATE)
+                        .setter(true)
+                        .getter(true);
+                    if (isPrimitiveType(fieldType)) {
+                        fieldDefinitionBuilder.nativeType(fieldType);
+                    } else {
+                        var importableClass = importablesMap.getOrDefault(fieldType, fieldType);
+                        var typePackageName = importableClass.contains(DOT) ? StringUtils.substringBeforeLast(
+                            importableClass, DOT) : EMPTY;
+                        var typeClassName = importableClass.contains(DOT) ? StringUtils.substringAfterLast(
+                            importableClass,
+                            DOT) : importableClass;
+                        fieldDefinitionBuilder.classType(ClassType.createClassTypeWithPackageAndName(typePackageName,
+                            typeClassName));
                     }
-                }
-                javaFileBuilder.addVariableDeclaration(classType, field, null);
-
-            });
-            javaFileBuilder
-                .setModulePath(projectInfo.getString(DOMAIN))
+                    if (isPrimaryKey(entry.getValue())) {
+                        primaryKeyTypeRef.set(fieldType);
+                    }
+                    return fieldDefinitionBuilder.build();
+                }).toList();
+            var definition = DefinitionBuilder.createClassBuilder(packageName, className)
+                .addModifier(Modifier.PUBLIC)
+                .addFields(fields)
                 .build();
+
+            var destinationPath = Paths.get(projectInfo.getString(DOMAIN), SRC, MAIN, JAVA);
+            var javaFile = com.camucode.gen.JavaFileBuilder.createBuilder(definition, destinationPath).build();
+            javaFile.writeFile();
+
+            createRepository(projectInfo);
+
             Optional.ofNullable(primaryKeyTypeRef.get()).ifPresent(primaryKeyType -> {
                 try {
-                    createRepository(projectInfo, repositoryPath, className, classDef,
+                    createRepository(projectInfo, className, classDef,
                         primaryKeyType);
                 } catch (IOException ex) {
                     log.error(ex.getMessage(), ex);
@@ -286,54 +328,85 @@ public class DomainModuleHandler {
 
     }
 
-    private void createRepository(JsonObject projectInfo,
-                                  Path repositoryPath,
-                                  String className,
-                                  JsonObject classDef,
-                                  String primaryKeyType) throws IOException {
+    private boolean isPrimitiveType(String typeName) {
+        return ArrayUtils.contains(PRIMITIVE_TYPES, typeName);
+    }
+
+    private String getType(JsonValue jsonValue) {
+        if (jsonValue.getValueType() == JsonValue.ValueType.STRING) {
+            return ((JsonString) jsonValue).getString();
+        }
+        return jsonValue.asJsonObject().getString("type", EMPTY);
+    }
+
+    private boolean isPrimaryKey(JsonValue jsonValue) {
+        if (jsonValue.getValueType() == JsonValue.ValueType.OBJECT) {
+            return jsonValue.asJsonObject().getBoolean(PRIMARY_KEY, false);
+        }
+        return false;
+    }
+
+    private void createRepository(JsonObject projectInfo, String className, JsonObject classDef, String primaryKeyType)
+        throws IOException {
+        var modelPackage = "%s.%s.%s".formatted(projectInfo.getString(PACKAGE), DOMAIN, MODEL);
+        var interfaceName = className + "Repository";
         var packageName
             = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, REPOSITORY);
-        var modelPackage = "%s.%s.%s.*".formatted(projectInfo.getString(PACKAGE), DOMAIN, MODEL);
-        var fileName = "%sRepository".formatted(className);
 
-        List<String> lines = new ArrayList<>();
-        lines.add(TEMPLATE_2_STRING_COMMA.formatted(PACKAGE, packageName));
-        lines.add(EMPTY);
-        lines.add(IMPORT_PACKAGE_TEMPLATE.formatted(modelPackage));
-        lines.add(EMPTY);
-        lines.add("public interface %s extends IRepository<%s, %s> {".formatted(fileName, className,
-            primaryKeyType));
+        var definitionBuilder = DefinitionBuilder
+            .createInterfaceBuilder(packageName, interfaceName)
+            .addInterfaceExtend(
+                ClassTypeBuilder.newBuilder().className("IRepository")
+                    .addGeneric("T",
+                        ClassTypeBuilder.newBuilder().className(className).packageName(modelPackage).build())
+                    .addGeneric("ID", primaryKeyType)
+                    .build()
+            )
+            .addModifier(Modifier.PUBLIC);
         if (classDef.containsKey(FINDERS)) {
-            classDef.getJsonObject(FINDERS).forEach((finderName, finderDescrip) -> {
-                var finderBody = finderDescrip.asJsonObject();
-                var parameters = finderBody.containsKey(PARAMETERS)
-                             ? finderBody.getJsonArray(PARAMETERS).stream()
-                        .map(param -> {
-                            var clazz = ((JsonString) param).getString();
-                            var parameterName = StringUtils.uncapitalize(clazz);
-                            return TEMPLATE_2_STRING.formatted(clazz, parameterName);
-                        })
-                        .collect(Collectors.joining(COMMA))
-                             : EMPTY;
-                var isCollection = finderBody.getBoolean("isCollection", false);
-                var returnType = "%s<%s>".formatted(isCollection ? "java.util.stream.Stream"
-                                                : "java.util.Optional",
-                    finderBody.getString(RETURN));
-                var method = "%s %s find%s(%s);".formatted(StringUtils.repeat(SPACE, TAB_SIZE),
-                    returnType,
-                    StringUtils.capitalize(finderName),
-                    parameters);
-                lines.add(method);
-                lines.add(EMPTY);
-            });
+            var methodsSet = classDef.getJsonObject(FINDERS).entrySet().stream().map(entry -> {
 
+                var finderBody = entry.getValue().asJsonObject();
+                var finderName = "find" + StringUtils.capitalize(entry.getKey());
+
+                var methodBuilder = MethodDefinitionBuilder.createBuilder()
+                    .name(finderName)
+                    .isAbstract(true);
+                var returnType = ClassTypeBuilder.newBuilder()
+                    .addGeneric("T", finderBody.getString(RETURN));
+                var isCollection = finderBody.getBoolean("isCollection", false);
+                if (isCollection) {
+                    returnType.packageName("java.util.stream").className("Stream");
+                } else {
+                    returnType.packageName("java.util").className("Optional");
+                }
+                if (finderBody.containsKey(PARAMETERS)) {
+                    finderBody.getJsonArray(PARAMETERS).stream().map(JsonString.class::cast).map(JsonString::getString)
+                        .forEach(parameter -> {
+                            if (!isPrimitiveType(parameter)) {
+                                ClassType parameterType = ClassTypeBuilder.newBuilder()
+                                    .className(parameter)
+                                    .packageName(modelPackage)
+                                    .build();
+                                String parameterName = StringUtils.uncapitalize(parameter);
+                                methodBuilder.addParameter(parameterName, parameterType);
+                            }
+                        });
+                }
+
+                return methodBuilder.returnType(returnType.build()).build();
+            }).collect(toSet());
+            if (definitionBuilder instanceof DefinitionBuilderWithMethods definitionBuilderWithMethods) {
+                definitionBuilderWithMethods.addMethods(methodsSet);
+            }
         }
-        lines.add("}");
-        if (importablesMap.containsKey(primaryKeyType)) {
-            lines.add(2, IMPORT_PACKAGE_TEMPLATE.formatted(importablesMap.get(primaryKeyType)));
+        if (definitionBuilder != null) {
+            var definition = definitionBuilder.build();
+            var destinationPath = Paths.get(projectInfo.getString(DOMAIN), SRC, MAIN, JAVA);
+            var javaFile = com.camucode.gen.JavaFileBuilder.createBuilder(definition, destinationPath).build();
+            javaFile.writeFile();
         }
-        var repositoryModelPath = repositoryPath.resolve(fileName + ".java");
-        Files.write(repositoryModelPath, lines);
+
     }
 
     private static class DomainModuleHandlerHolder {
