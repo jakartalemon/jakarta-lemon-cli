@@ -144,7 +144,7 @@ public class DomainModuleHandler {
                 var inject = injects.getString(i);
                 var importInject
                     = "%s.%s.%s.%s".formatted(projectInfo.getString(PACKAGE),
-                        DOMAIN, REPOSITORY, inject);
+                    DOMAIN, REPOSITORY, inject);
                 javaFileBuilder.addImportClass(importInject);
                 classesInject.add(inject);
             }
