@@ -18,18 +18,21 @@ package dev.jakartalemon.cli.project.hexa.handler;
 import com.camucode.gen.DefinitionBuilder;
 import com.camucode.gen.DefinitionBuilderWithMethods;
 import com.camucode.gen.FieldDefinitionBuilder;
+import com.camucode.gen.JavaFileBuilder;
 import com.camucode.gen.MethodDefinitionBuilder;
 import com.camucode.gen.type.ClassType;
 import com.camucode.gen.type.ClassTypeBuilder;
+import com.camucode.gen.type.JavaType;
+import com.camucode.gen.type.NativeTypeBuilder;
+import static com.camucode.gen.util.ClassUtil.removeClassFromPackage;
+import static com.camucode.gen.util.Constants.GENERAL_CLASSES;
 import com.camucode.gen.values.Modifier;
 import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.project.hexa.AddModelCommand;
 import dev.jakartalemon.cli.util.Constants;
 import dev.jakartalemon.cli.util.FileClassUtil;
 import dev.jakartalemon.cli.util.HttpClientUtil;
-import dev.jakartalemon.cli.util.JavaFileBuilder;
 import dev.jakartalemon.cli.util.PomUtil;
-import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonString;
 import jakarta.json.JsonValue;
@@ -65,6 +68,7 @@ import static dev.jakartalemon.cli.util.Constants.JAVA_VERSION;
 import static dev.jakartalemon.cli.util.Constants.LOMBOK_DEPENDENCY;
 import static dev.jakartalemon.cli.util.Constants.MAIN;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_RELEASE;
+import static dev.jakartalemon.cli.util.Constants.METHODS;
 import static dev.jakartalemon.cli.util.Constants.MOCKITO_DEPENDENCY;
 import static dev.jakartalemon.cli.util.Constants.MODEL;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
@@ -79,6 +83,11 @@ import static dev.jakartalemon.cli.util.Constants.TEST;
 import static dev.jakartalemon.cli.util.Constants.USECASE;
 import static dev.jakartalemon.cli.util.Constants.VERSION;
 import static java.nio.charset.StandardCharsets.UTF_8;
+
+import java.util.Collection;
+import java.util.Collections;
+
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 
@@ -88,7 +97,7 @@ import static org.apache.commons.lang3.StringUtils.EMPTY;
 @Slf4j
 public class DomainModuleHandler {
 
-    private static final String[] PRIMITIVE_TYPES = {
+    private static final String[] NATIVE_TYPES = {
         "byte", "Byte",
         "short", "Short",
         "int", "Integer",
@@ -97,8 +106,7 @@ public class DomainModuleHandler {
         "double", "Double",
         "boolean", "Boolean",
         "char", "Character",
-        "String",
-    };
+        "String",};
 
     public static DomainModuleHandler getInstance() {
         return DomainModuleHandlerHolder.INSTANCE;
@@ -151,7 +159,7 @@ public class DomainModuleHandler {
                                        String className,
                                        JsonObject classDefinition) {
         try {
-            var javaFileBuilder = new JavaFileBuilder();
+            var javaFileBuilder = new dev.jakartalemon.cli.util.JavaFileBuilder();
             javaFileBuilder.setPackage(projectInfo.getString(PACKAGE), DOMAIN, USECASE);
             List<String> classesInject = getClassesInject(projectInfo, classDefinition,
                 javaFileBuilder);
@@ -177,7 +185,7 @@ public class DomainModuleHandler {
 
     private List<String> getClassesInject(JsonObject projectInfo,
                                           JsonObject classDefinition,
-                                          JavaFileBuilder javaFileBuilder) {
+                                          dev.jakartalemon.cli.util.JavaFileBuilder javaFileBuilder) {
         List<String> classesInject = new ArrayList<>();
         if (classDefinition.containsKey(INJECTS)) {
             var injects = classDefinition.getJsonArray(INJECTS);
@@ -185,7 +193,7 @@ public class DomainModuleHandler {
                 var inject = injects.getString(i);
                 var importInject
                     = "%s.%s.%s.%s".formatted(projectInfo.getString(PACKAGE),
-                    DOMAIN, REPOSITORY, inject);
+                        DOMAIN, REPOSITORY, inject);
                 javaFileBuilder.addImportClass(importInject);
                 classesInject.add(inject);
             }
@@ -198,43 +206,77 @@ public class DomainModuleHandler {
                                    JsonObject classDefinition) {
         try {
             log.info("Creating {} use case class", className);
-            var javaFileBuilder = new JavaFileBuilder();
-            javaFileBuilder.setPackage(projectInfo.getString(PACKAGE), DOMAIN, USECASE)
-                .addImportClass("%s.%s.%s.*".formatted(projectInfo.getString(PACKAGE), DOMAIN,
-                    MODEL)).setClassName(className);
-            List<String> classesInject = getClassesInject(projectInfo, classDefinition,
-                javaFileBuilder);
-            if (!classesInject.isEmpty()) {
-                classesInject.forEach(classInject -> {
-                    var variableName = StringUtils.uncapitalize(classInject);
-                    javaFileBuilder.addVariableDeclaration(classInject, variableName, null, true);
-                });
+            var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, USECASE);
+            var modelPackageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, MODEL);
+            Collection<FieldDefinitionBuilder.FieldDefinition> fieldsDefinition = getClassesInject(projectInfo,
+                classDefinition)
+                .stream().map(classType -> FieldDefinitionBuilder.createBuilder()
+                .addModifier(Modifier.PRIVATE)
+                .fieldName(StringUtils.uncapitalize(classType.getClassName()))
+                .classType(classType)
+                .build()).collect(toList());
+            Collection<MethodDefinitionBuilder.MethodDefinition> methodsDefinitions = classDefinition.getJsonObject(
+                METHODS)
+                .entrySet().stream().map(methodEntry -> {
+                    var methodContent = methodEntry.getValue().asJsonObject();
 
-            }
+                    var methodDefinitionBuilder
+                        = MethodDefinitionBuilder.createBuilder()
+                            .name(methodEntry.getKey())
+                            .addModifier(Modifier.PUBLIC);
+                    if (methodContent.containsKey(RETURN)) {
+                        var returnValue = methodContent.getString(RETURN).split(COLON);
+                        var returnType = returnValue[0];
+                        methodDefinitionBuilder.body("return %s;".formatted(returnValue[1]));
+                        log.debug("return type:{}", returnType);
+                        if (isNativeType(returnType)) {
+                            methodDefinitionBuilder.returnClassType(
+                                NativeTypeBuilder.newBuilder().name(returnType).build());
+                        } else {
+                            methodDefinitionBuilder.returnClassType(
+                                ClassTypeBuilder.newBuilder()
+                                    .packageName(modelPackageName)
+                                    .className(returnType)
+                                    .build()
+                            );
+                        }
+                    }
+                    log.debug("creating parameters");
+                    methodContent.entrySet().stream().filter(entry -> !StringUtils.equalsIgnoreCase(entry.getKey(),
+                        RETURN)).forEach(fieldEntry -> {
+                        var parameterName = fieldEntry.getKey();
+                        var parameterType = ((JsonString) fieldEntry.getValue()).getString();
 
-            var methods = classDefinition.getJsonObject("methods");
+                        JavaType typeDefinition;
+                        if (isNativeType(parameterType)) {
+                            typeDefinition = NativeTypeBuilder.newBuilder().name(parameterType).build();
+                        } else if (GENERAL_CLASSES.containsKey(parameterType)) {
+                            typeDefinition = ClassTypeBuilder.newBuilder()
+                                .className(parameterType)
+                                .packageName(removeClassFromPackage(GENERAL_CLASSES.get(parameterType), parameterType))
+                                .build();
+                        } else {
+                            typeDefinition = ClassTypeBuilder.newBuilder()
+                                .className(parameterType)
+                                .packageName(modelPackageName)
+                                .build();
+                        }
 
-            methods.keySet().forEach(methodName -> {
-                var method = methods.getJsonObject(methodName);
-                var returnValue = method.getString(RETURN, "void");
-                String defaultReturnValue = null;
-                if (returnValue.contains(COLON)) {
-                    var returns = returnValue.split(COLON);
-                    returnValue = returns[0];
-                    defaultReturnValue = returns[1];
-                }
-                var parameters = method.entrySet().stream()
-                    .filter(entry -> !entry.getKey().equals(RETURN))
-                    .collect(Json::createObjectBuilder,
-                        (accumulator, item) -> accumulator.add(item.getKey(), item.getValue()),
-                        (accumulator, item) -> accumulator.add("last", item)).build();
-                javaFileBuilder.addMethod(methodName, parameters, returnValue, defaultReturnValue);
+                        methodDefinitionBuilder.addParameter(parameterName, typeDefinition);
+                    });
+                    return methodDefinitionBuilder.build();
+                }).collect(toList());
 
-            });
-
-            javaFileBuilder
-                .setModulePath(projectInfo.getString(DOMAIN))
+            var useClassDefinition = DefinitionBuilder
+                .createClassBuilder(packageName, className)
+                .addMethods(methodsDefinitions)
+                .addFields(fieldsDefinition)
+                .addModifier(Modifier.PUBLIC)
                 .build();
+            var destinationPath = Paths.get(projectInfo.getString(DOMAIN), SRC, MAIN, JAVA);
+            var javaFile = JavaFileBuilder.createBuilder(useClassDefinition, destinationPath).build();
+            javaFile.writeFile();
+
         } catch (IOException ex) {
             log.error(ex.getMessage(), ex);
         }
@@ -286,7 +328,7 @@ public class DomainModuleHandler {
                         .addModifier(Modifier.PRIVATE)
                         .setter(true)
                         .getter(true);
-                    if (isPrimitiveType(fieldType)) {
+                    if (isNativeType(fieldType)) {
                         fieldDefinitionBuilder.nativeType(fieldType);
                     } else {
                         var importableClass = importablesMap.getOrDefault(fieldType, fieldType);
@@ -309,7 +351,7 @@ public class DomainModuleHandler {
                 .build();
 
             var destinationPath = Paths.get(projectInfo.getString(DOMAIN), SRC, MAIN, JAVA);
-            var javaFile = com.camucode.gen.JavaFileBuilder.createBuilder(definition, destinationPath).build();
+            var javaFile = JavaFileBuilder.createBuilder(definition, destinationPath).build();
             javaFile.writeFile();
 
             createRepository(projectInfo);
@@ -328,8 +370,21 @@ public class DomainModuleHandler {
 
     }
 
-    private boolean isPrimitiveType(String typeName) {
-        return ArrayUtils.contains(PRIMITIVE_TYPES, typeName);
+    private List<ClassType> getClassesInject(JsonObject projectInfo, JsonObject classDefinition) {
+        if (!classDefinition.containsKey(INJECTS)) {
+            return Collections.emptyList();
+        }
+        var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE),
+            DOMAIN, REPOSITORY);
+        return classDefinition.getJsonArray(INJECTS).stream().map(jsonValue -> (JsonString) jsonValue)
+            .map(itemClassInject -> ClassTypeBuilder.newBuilder()
+            .className(itemClassInject.getString())
+            .packageName(packageName)
+            .build()).collect(toList());
+    }
+
+    private boolean isNativeType(String typeName) {
+        return ArrayUtils.contains(NATIVE_TYPES, typeName);
     }
 
     private String getType(JsonValue jsonValue) {
@@ -383,7 +438,7 @@ public class DomainModuleHandler {
                 if (finderBody.containsKey(PARAMETERS)) {
                     finderBody.getJsonArray(PARAMETERS).stream().map(JsonString.class::cast).map(JsonString::getString)
                         .forEach(parameter -> {
-                            if (!isPrimitiveType(parameter)) {
+                            if (!isNativeType(parameter)) {
                                 ClassType parameterType = ClassTypeBuilder.newBuilder()
                                     .className(parameter)
                                     .packageName(modelPackage)
@@ -394,7 +449,7 @@ public class DomainModuleHandler {
                         });
                 }
 
-                return methodBuilder.returnType(returnType.build()).build();
+                return methodBuilder.returnClassType(returnType.build()).build();
             }).collect(toSet());
             if (definitionBuilder instanceof DefinitionBuilderWithMethods definitionBuilderWithMethods) {
                 definitionBuilderWithMethods.addMethods(methodsSet);
@@ -403,7 +458,7 @@ public class DomainModuleHandler {
         if (definitionBuilder != null) {
             var definition = definitionBuilder.build();
             var destinationPath = Paths.get(projectInfo.getString(DOMAIN), SRC, MAIN, JAVA);
-            var javaFile = com.camucode.gen.JavaFileBuilder.createBuilder(definition, destinationPath).build();
+            var javaFile = JavaFileBuilder.createBuilder(definition, destinationPath).build();
             javaFile.writeFile();
         }
 

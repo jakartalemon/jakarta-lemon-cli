@@ -52,6 +52,8 @@ import static org.apache.commons.lang3.StringUtils.SPACE;
 
 /**
  * @author Diego Silva mailto:diego.silva@apuntesdejava.com
+ * 
+ * @deprecated @
  */
 public class JavaFileBuilder {
 

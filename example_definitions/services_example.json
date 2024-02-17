@@ -24,13 +24,13 @@
         ],
         "methods": {
             "findAll": {
-                "return": "java.util.stream.Stream<Person>:personRepository.findAll()"
+                "return": "Stream<Person>:personRepository.findAll()"
             },
             "create": {
                 "dni": "String",
                 "firstName": "String",
                 "lastName": "String",
-                "birthdate": "java.time.LocalDate"
+                "birthdate": "LocalDate"
             }
         }
     }

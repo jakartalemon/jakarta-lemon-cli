@@ -71,6 +71,7 @@ public class Constants {
     public static final String IMPORT_PACKAGE_TEMPLATE = "import %s;";
     public static final int TAB_SIZE = 4;
     public static final String SCOPE = "scope";
+    public static final String METHODS = "methods";
     public static final String STRING_TYPE = "String";
     public static final String INTEGER_TYPE = "Integer";
     public static final String BOOLEAN_TYPE = "Boolean";
