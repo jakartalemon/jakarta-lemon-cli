@@ -24,8 +24,10 @@ import com.camucode.gen.type.ClassType;
 import com.camucode.gen.type.ClassTypeBuilder;
 import com.camucode.gen.type.JavaType;
 import com.camucode.gen.type.NativeTypeBuilder;
+
 import static com.camucode.gen.util.ClassUtil.removeClassFromPackage;
 import static com.camucode.gen.util.Constants.GENERAL_CLASSES;
+
 import com.camucode.gen.values.Modifier;
 import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.project.hexa.AddModelCommand;
@@ -54,7 +56,6 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
-import static dev.jakartalemon.cli.util.Constants.CLASSES_IMPORT_TEST;
 import static dev.jakartalemon.cli.util.Constants.COLON;
 import static dev.jakartalemon.cli.util.Constants.DOMAIN;
 import static dev.jakartalemon.cli.util.Constants.DOT;
@@ -106,7 +107,8 @@ public class DomainModuleHandler {
         "double", "Double",
         "boolean", "Boolean",
         "char", "Character",
-        "String",};
+        "String",
+    };
 
     public static DomainModuleHandler getInstance() {
         return DomainModuleHandlerHolder.INSTANCE;
@@ -159,46 +161,52 @@ public class DomainModuleHandler {
                                        String className,
                                        JsonObject classDefinition) {
         try {
-            var javaFileBuilder = new dev.jakartalemon.cli.util.JavaFileBuilder();
-            javaFileBuilder.setPackage(projectInfo.getString(PACKAGE), DOMAIN, USECASE);
-            List<String> classesInject = getClassesInject(projectInfo, classDefinition,
-                javaFileBuilder);
-            CLASSES_IMPORT_TEST.forEach(javaFileBuilder::addImportClass);
+            var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, USECASE);
+            var repositoryPackageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, REPOSITORY);
             var classTestName = "%sTest".formatted(className);
-            javaFileBuilder.addClassAnnotation("ExtendWith(MockitoExtension.class)");
-            javaFileBuilder.setClassName(classTestName);
-
-            classesInject.forEach(classInject -> {
-                var variableName = StringUtils.uncapitalize(classInject);
-                javaFileBuilder.addVariableDeclaration(classInject, variableName, "Mock");
-            });
-
-            var classNameInstance = StringUtils.uncapitalize(className);
-            javaFileBuilder.addVariableDeclaration(className, classNameInstance, "InjectMocks")
-                .setModulePath(projectInfo.getString(DOMAIN))
-                .setResource(TEST)
+            //add repositories
+            List<FieldDefinitionBuilder.FieldDefinition> fieldsDefinition = classDefinition.getJsonArray(INJECTS)
+                .stream()
+                .map(jsonValue -> ((JsonString) jsonValue).getString()).map(
+                    repositoryInject -> FieldDefinitionBuilder.createBuilder()
+                        .addModifier(Modifier.PRIVATE)
+                        .fieldName(
+                            StringUtils.uncapitalize(
+                                repositoryInject))
+                        .classType(
+                            ClassTypeBuilder.newBuilder()
+                                .className(repositoryInject)
+                                .packageName(repositoryPackageName)
+                                .build()
+                        )
+                        .build()
+                )
+                .collect(toList());
+            //add current service
+            fieldsDefinition.add(
+                FieldDefinitionBuilder.createBuilder()
+                    .addModifier(Modifier.PRIVATE)
+                    .fieldName(
+                        StringUtils.uncapitalize(
+                            className))
+                    .classType(
+                        ClassTypeBuilder.newBuilder()
+                            .className(className)
+                            .build()
+                    )
+                    .build()
+            );
+            var definition = DefinitionBuilder.createClassBuilder(packageName, classTestName)
+                .addModifier(Modifier.PUBLIC)
+                .addFields(fieldsDefinition)
                 .build();
+            var destinationPath = Paths.get(projectInfo.getString(DOMAIN), SRC, TEST, JAVA);
+            var javaFile = JavaFileBuilder.createBuilder(definition, destinationPath).build();
+            javaFile.writeFile();
+
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }
-    }
-
-    private List<String> getClassesInject(JsonObject projectInfo,
-                                          JsonObject classDefinition,
-                                          dev.jakartalemon.cli.util.JavaFileBuilder javaFileBuilder) {
-        List<String> classesInject = new ArrayList<>();
-        if (classDefinition.containsKey(INJECTS)) {
-            var injects = classDefinition.getJsonArray(INJECTS);
-            for (var i = 0; i < injects.size(); i++) {
-                var inject = injects.getString(i);
-                var importInject
-                    = "%s.%s.%s.%s".formatted(projectInfo.getString(PACKAGE),
-                        DOMAIN, REPOSITORY, inject);
-                javaFileBuilder.addImportClass(importInject);
-                classesInject.add(inject);
-            }
-        }
-        return classesInject;
     }
 
     public void createUseCaseClass(JsonObject projectInfo,
@@ -211,19 +219,19 @@ public class DomainModuleHandler {
             Collection<FieldDefinitionBuilder.FieldDefinition> fieldsDefinition = getClassesInject(projectInfo,
                 classDefinition)
                 .stream().map(classType -> FieldDefinitionBuilder.createBuilder()
-                .addModifier(Modifier.PRIVATE)
-                .fieldName(StringUtils.uncapitalize(classType.getClassName()))
-                .classType(classType)
-                .build()).collect(toList());
+                    .addModifier(Modifier.PRIVATE)
+                    .fieldName(StringUtils.uncapitalize(classType.getClassName()))
+                    .classType(classType)
+                    .build()).collect(toList());
             Collection<MethodDefinitionBuilder.MethodDefinition> methodsDefinitions = classDefinition.getJsonObject(
-                METHODS)
+                    METHODS)
                 .entrySet().stream().map(methodEntry -> {
                     var methodContent = methodEntry.getValue().asJsonObject();
 
                     var methodDefinitionBuilder
                         = MethodDefinitionBuilder.createBuilder()
-                            .name(methodEntry.getKey())
-                            .addModifier(Modifier.PUBLIC);
+                        .name(methodEntry.getKey())
+                        .addModifier(Modifier.PUBLIC);
                     if (methodContent.containsKey(RETURN)) {
                         var returnValue = methodContent.getString(RETURN).split(COLON);
                         var returnType = returnValue[0];
@@ -378,9 +386,9 @@ public class DomainModuleHandler {
             DOMAIN, REPOSITORY);
         return classDefinition.getJsonArray(INJECTS).stream().map(jsonValue -> (JsonString) jsonValue)
             .map(itemClassInject -> ClassTypeBuilder.newBuilder()
-            .className(itemClassInject.getString())
-            .packageName(packageName)
-            .build()).collect(toList());
+                .className(itemClassInject.getString())
+                .packageName(packageName)
+                .build()).collect(toList());
     }
 
     private boolean isNativeType(String typeName) {
