@@ -75,7 +75,7 @@ public class AddEntityCommand implements Callable<Integer> {
                     jpaPersistenceHandler, projectInfo, key);
                 if (definition.containsKey(MAP_TO_MODEL)) {
                     var mapToModel = definition.getString(MAP_TO_MODEL);
-                    createRepository(key, mapToModel, projectInfo);
+                    createRepository(mapToModel, projectInfo);
                 }
             }));
         jpaPersistenceHandler.createPersistenceUnit(infrastructureModuleHandler.
@@ -88,8 +88,7 @@ public class AddEntityCommand implements Callable<Integer> {
         return 0;
     }
 
-    private void createRepository(String entityName,
-                                  String modelName,
+    private void createRepository(String modelName,
                                   JsonObject projectInfo) {
         var packageName = projectInfo.getString(PACKAGE);
         var infrastructurePath = projectInfo.getString(INFRASTRUCTURE);

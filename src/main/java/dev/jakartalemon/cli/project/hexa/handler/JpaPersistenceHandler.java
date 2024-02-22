@@ -15,15 +15,20 @@
  */
 package dev.jakartalemon.cli.project.hexa.handler;
 
+import com.camucode.gen.DefinitionBuilder;
+import com.camucode.gen.FieldDefinitionBuilder;
+import com.camucode.gen.type.AnnotationType;
+import com.camucode.gen.type.AnnotationTypeBuilder;
+import com.camucode.gen.type.ClassType;
+import com.camucode.gen.type.ClassTypeBuilder;
+import com.camucode.gen.values.Modifier;
 import dev.jakartalemon.cli.util.DependenciesUtil;
 import dev.jakartalemon.cli.util.DocumentXmlUtil;
-import dev.jakartalemon.cli.util.FileClassUtil;
 import dev.jakartalemon.cli.util.HttpClientUtil;
 import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 
@@ -35,53 +40,110 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-import dev.jakartalemon.cli.util.JavaFileBuilder;
-
-import static dev.jakartalemon.cli.util.Constants.*;
-import static dev.jakartalemon.cli.util.LinesUtils.removeLastComma;
+import static dev.jakartalemon.cli.util.Constants.ADAPTERS;
+import static dev.jakartalemon.cli.util.Constants.ANNOTATION_PROPS;
+import static dev.jakartalemon.cli.util.Constants.BOOLEAN_TYPE;
+import static dev.jakartalemon.cli.util.Constants.COLUMN_ANNOTATION;
+import static dev.jakartalemon.cli.util.Constants.DOMAIN;
+import static dev.jakartalemon.cli.util.Constants.DOT;
+import static dev.jakartalemon.cli.util.Constants.FIELDS;
+import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
+import static dev.jakartalemon.cli.util.Constants.INTEGER_TYPE;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_LEMON_CONFIG_URL;
+import static dev.jakartalemon.cli.util.Constants.JAVA;
+import static dev.jakartalemon.cli.util.Constants.JOIN_COLUMN_ANNOTATION;
+import static dev.jakartalemon.cli.util.Constants.MAIN;
+import static dev.jakartalemon.cli.util.Constants.MANY_TO_ONE;
+import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_PERSISTENCE_API;
+import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_TRANSACTION_API;
+import static dev.jakartalemon.cli.util.Constants.META_INF;
+import static dev.jakartalemon.cli.util.Constants.NAME;
+import static dev.jakartalemon.cli.util.Constants.ONE_TO_ONE;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
+import static dev.jakartalemon.cli.util.Constants.PRIMARY_KEY;
+import static dev.jakartalemon.cli.util.Constants.REPOSITORY;
+import static dev.jakartalemon.cli.util.Constants.RESOURCES;
+import static dev.jakartalemon.cli.util.Constants.SLASH;
+import static dev.jakartalemon.cli.util.Constants.SRC;
+import static dev.jakartalemon.cli.util.Constants.STRING_TYPE;
+import static dev.jakartalemon.cli.util.Constants.TYPE;
+import static dev.jakartalemon.cli.util.Constants.VERSION;
+import static dev.jakartalemon.cli.util.Constants.XMLNS;
+import static dev.jakartalemon.cli.util.Constants.XMLNS_XSI;
+import static dev.jakartalemon.cli.util.Constants.XMLNS_XSI_INSTANCE;
 import static javax.xml.xpath.XPathConstants.NODESET;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.SPACE;
 
 /**
- *
  * @author Diego Silva mailto:diego.silva@apuntesdejava.com
  */
 @Slf4j
 public class JpaPersistenceHandler {
 
-    private static final String IMPORT_COLUMN = "import jakarta.persistence.%s;";
-    private static final String IMPORT_MANY_TO_ONE = "import jakarta.persistence.ManyToOne;";
-    private static final String IMPORT_ONE_TO_ONE = "import jakarta.persistence.OneToOne;";
     private static final String PERSISTENCE_FILE_NAME = "persistence.xml";
     private static final String PERSISTENCE = "persistence";
-    private static final String[][] ASSOCIATIONS_DESCRIPTIONS = {
-        {MANY_TO_ONE, IMPORT_MANY_TO_ONE},
-        {ONE_TO_ONE, IMPORT_ONE_TO_ONE}
-    };
+
+    private static final Map<String, AnnotationType> ASSOCIATIONS_ANNOTATIONS = Map.of(
+        MANY_TO_ONE,
+        AnnotationTypeBuilder.newBuilder()
+            .classType(ClassTypeBuilder.newBuilder().className("ManyToOne").packageName("jakarta.persistence").build())
+            .build(),
+        ONE_TO_ONE,
+        AnnotationTypeBuilder.newBuilder()
+            .classType(ClassTypeBuilder.newBuilder().className("OneToOne").packageName("jakarta.persistence").build())
+            .build()
+    );
 
     public static JpaPersistenceHandler getInstance() {
         return JpaPersistenceHandlerHolder.INSTANCE;
     }
 
     public static void createRepositoryImplementation(String modelName,
-                                                      String packageName,
+                                                      String packagePath,
                                                       String infrastructurePath) {
-        var importClass = "%s.%s.%s.%sRepository".formatted(packageName, DOMAIN, REPOSITORY, modelName);
         try {
-            var javaFileBuilder = new JavaFileBuilder()
-                .setClassName(modelName + "RepositoryImpl")
-                .setPackage(packageName, INFRASTRUCTURE, REPOSITORY)
-                .setModulePath(infrastructurePath)
-                .addImportClass(importClass)
-                .addImportClass("jakarta.inject.Inject")
-                .addImportClass("jakarta.persistence.EntityManager")
-                .addVariableDeclaration("EntityManager", "em", "Inject")
-                .addImplementationInterface(modelName + "Repository");
-            javaFileBuilder.build();
+            var packageName = PACKAGE_TEMPLATE.formatted(packagePath, INFRASTRUCTURE, REPOSITORY);
+            var packageRepository = PACKAGE_TEMPLATE.formatted(packagePath, DOMAIN, REPOSITORY);
+            var injectAnnotation = AnnotationTypeBuilder.newBuilder()
+                .classType(ClassTypeBuilder.newBuilder()
+                    .packageName("jakarta.inject")
+                    .className("Inject")
+                    .build())
+                .build();
+            var repositoryClassType = ClassTypeBuilder.newBuilder()
+                .className(modelName + "Repository")
+                .packageName(packageRepository)
+                .build();
+            var entityManagerClassType = ClassTypeBuilder.newBuilder()
+                .className("EntityManager")
+                .packageName("jakarta.persistence")
+                .build();
+
+            var repositoryDefinition = DefinitionBuilder.createClassBuilder(packageName, modelName + "RepositoryImpl")
+                .addInterfaceImplements(repositoryClassType)
+                .addModifier(Modifier.PUBLIC)
+                .addField(
+                    FieldDefinitionBuilder.createBuilder()
+                        .fieldName("em")
+                        .addModifier(Modifier.PRIVATE)
+                        .classType(entityManagerClassType)
+                        .addAnnotationType(injectAnnotation)
+                        .build()
+                )
+                .build();
+
+            var destinationPath = Paths.get(infrastructurePath, SRC, MAIN, JAVA);
+            var javaFile = com.camucode.gen.JavaFileBuilder.createBuilder(repositoryDefinition, destinationPath)
+                .build();
+            javaFile.writeFile();
+
+
         } catch (IOException ex) {
             log.error(ex.getMessage(), ex);
         }
@@ -112,118 +174,113 @@ public class JpaPersistenceHandler {
         );
     }
 
-    private boolean checkAssociation(List<String> lines,
-                                     JsonObject definitionValue) {
-        for (var descriptionsRow : ASSOCIATIONS_DESCRIPTIONS) {
-            var annotation = descriptionsRow[0];
-            if (definitionValue.containsKey(annotation)) {
-                var importDeclaration = descriptionsRow[1];
-                if (!lines.contains(importDeclaration)) {
-                    lines.add(2, importDeclaration);
-                }
-                lines.add("%s@%s".formatted(StringUtils.repeat(SPACE, TAB_SIZE), StringUtils.
-                    capitalize(annotation)));
-                return true;
-            }
+    private Optional<AnnotationType> getAnnotationByAssociation(JsonObject definitionValue) {
+        Set<String> fields = definitionValue.keySet();
+        for (String field : fields) {
+            if (ASSOCIATIONS_ANNOTATIONS.containsKey(field))
+                return Optional.of(ASSOCIATIONS_ANNOTATIONS.get(field));
         }
-        return false;
-
+        return Optional.empty();
     }
+
 
     public void createEntityClass(JsonObject projectInfo,
                                   String className,
                                   JsonObject jsonObject) {
         try {
             log.debug("classDefinition:{}", jsonObject);
-            List<String> lines = new ArrayList<>();
             var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), INFRASTRUCTURE,
-                ADAPTERS) + DOT + ENTITIES;
-            lines.add(TEMPLATE_2_STRING_COMMA.formatted(PACKAGE, packageName));
-            lines.add(EMPTY);
-            lines.add("import jakarta.persistence.Entity;");
-            lines.add("import jakarta.persistence.Id;");
-            lines.add("import lombok.Getter;");
-            lines.add("import lombok.Setter;");
-            lines.add(EMPTY);
-            lines.add("@Entity");
-            lines.add("@Getter");
-            lines.add("@Setter");
-            lines.add("public class %s {".formatted(className));
-            jsonObject.getJsonObject(FIELDS).forEach((fieldName, definition) -> {
-                var definitionValue = definition.asJsonObject();
-                var type = definitionValue.getString(TYPE, STRING_TYPE);
-                if (definitionValue.getBoolean(PRIMARY_KEY, false)) {
-                    lines.add("%s@Id".formatted(StringUtils.repeat(SPACE,
-                        TAB_SIZE)));
-                }
-                var hasAssociation = checkAssociation(lines, definitionValue);
-                if (hasAssociation) {
-                    checkColumnDefinition(lines, definitionValue, JOIN_COLUMN_ANNOTATION,
-                        joinColumnAnnotationProperties);
-                } else {
-                    checkColumnDefinition(lines, definitionValue, COLUMN_ANNOTATION,
-                        columnAnnotationProperties);
-                }
-                lines.add("%sprivate %s %s;".formatted(StringUtils.repeat(SPACE, TAB_SIZE), type,
-                    fieldName));
-                lines.add(EMPTY);
-            });
-            lines.add("}");
-            FileClassUtil.writeClassFile(projectInfo, packageName, className, lines, INFRASTRUCTURE);
+                ADAPTERS);
+
+            //create fields
+            Collection<FieldDefinitionBuilder.FieldDefinition> fields =
+                jsonObject.getJsonObject(FIELDS).entrySet().stream().map(entry -> {
+                    JsonObject definitionValue = entry.getValue().asJsonObject();
+                    FieldDefinitionBuilder fieldDefinitionBuilder = FieldDefinitionBuilder.createBuilder()
+                        .getter(true)
+                        .setter(true)
+                        .addModifier(Modifier.PRIVATE)
+                        .fieldName(entry.getKey())
+                        .nativeType(definitionValue.getString(TYPE));
+                    if (definitionValue.getBoolean(PRIMARY_KEY, false))
+                        fieldDefinitionBuilder.addAnnotationType(
+                            AnnotationTypeBuilder.newBuilder()
+                                .classType(
+                                    ClassTypeBuilder.newBuilder()
+                                        .packageName("jakarta.persistence")
+                                        .className("Id")
+                                        .build()
+                                )
+                                .build()
+                        );
+
+                    //creating associations
+                    Optional<AnnotationType> association = getAnnotationByAssociation(definitionValue);
+
+                    //join column
+                    AnnotationType annotation = association.map(assoc -> {
+                        fieldDefinitionBuilder.addAnnotationType(assoc);
+                        return getAnnotationByColumns(definitionValue, joinColumnAnnotationProperties,
+                            ClassTypeBuilder.newBuilder().className("JoinColumn").packageName("jakarta.persistence")
+                                .build());
+                    }).orElseGet(() -> getAnnotationByColumns(definitionValue, //@Column
+                        columnAnnotationProperties,
+                        ClassTypeBuilder.newBuilder().className("Column").packageName("jakarta.persistence")
+                            .build()));
+                    if (annotation != null)
+                        fieldDefinitionBuilder.addAnnotationType(annotation);
+
+                    return fieldDefinitionBuilder.build();
+                }).collect(Collectors.toList());
+            var entitytDefinition = DefinitionBuilder.createClassBuilder(packageName, className)
+                .addModifier(Modifier.PUBLIC)
+                .addAnnotationType(
+                    AnnotationTypeBuilder.newBuilder()
+                        .classType(ClassTypeBuilder.newBuilder()
+                            .className("Entity")
+                            .packageName("jakarta.persistence")
+                            .build())
+                        .build()
+                )
+                .addFields(fields)
+                .build();
+            var destinationPath = Paths.get(projectInfo.getString(INFRASTRUCTURE), SRC, MAIN, JAVA);
+            var javaFile = com.camucode.gen.JavaFileBuilder.createBuilder(entitytDefinition, destinationPath).build();
+            javaFile.writeFile();
+
 
         } catch (IOException ex) {
             log.error(ex.getMessage(), ex);
         }
     }
 
-    private String getPropertyValue(JsonObject definitionValue,
-                                    JsonObject annotationsProperties,
-                                    String property) {
-        var valueType = annotationsProperties.getString(property, STRING_TYPE);
-        if (StringUtils.equals(valueType, STRING_TYPE)) {
-            return "\"%s\"".formatted(definitionValue.getString(property));
-        }
-        if (StringUtils.equals(valueType, INTEGER_TYPE)) {
-            return "%s".formatted(definitionValue.getInt(property));
-        }
-        if (StringUtils.equals(valueType, BOOLEAN_TYPE)) {
-            return "\"%s\"".formatted(definitionValue.getBoolean(property));
-        }
 
-        return null;
-    }
-
-    private void checkColumnDefinition(List<String> lines,
-                                       JsonObject definitionValue,
-                                       String annotation,
-                                       JsonObject annotationsProperties) {
+    private AnnotationType getAnnotationByColumns(JsonObject definitionValue, JsonObject annotationsProperties,
+                                                  ClassType classType) {
         var propColumns = definitionValue.keySet()
             .stream()
-            .filter(annotationsProperties::containsKey).
-            toList();
-        if (propColumns.isEmpty()) {
-            return;
-        }
-        var importColumn = IMPORT_COLUMN.formatted(annotation);
-        if (!lines.contains(importColumn)) {
-            lines.add(2, importColumn);
-        }
-        lines.add("%s@%s(".formatted(StringUtils.repeat(SPACE, TAB_SIZE), annotation));
+            .filter(annotationsProperties::containsKey)
+            .toList();
+        if (propColumns.isEmpty()) return null;
+        AnnotationTypeBuilder annotationTypeBuilder = AnnotationTypeBuilder.newBuilder()
+            .classType(classType);
+
         propColumns.forEach(property -> {
-            var propertyValue = getPropertyValue(definitionValue, annotationsProperties, property);
-            if (propertyValue != null) {
-                lines.add("%s%s = %s,".formatted(StringUtils.repeat(SPACE, TAB_SIZE * 2), property,
-                    propertyValue));
+            var propertyType = annotationsProperties.getString(property, STRING_TYPE);
+            switch (propertyType) {
+                case STRING_TYPE -> annotationTypeBuilder.addAttribute(property, definitionValue.getString(property));
+                case INTEGER_TYPE -> annotationTypeBuilder.addAttribute(property, definitionValue.getInt(property));
+                case BOOLEAN_TYPE -> annotationTypeBuilder.addAttribute(property, definitionValue.getBoolean(property));
             }
+
         });
 
-        removeLastComma(lines);
-
-        lines.add("%s)".formatted(StringUtils.repeat(SPACE, TAB_SIZE)));
+        return annotationTypeBuilder.build();
     }
 
+
     private void readAnnotationsDefinitions() throws IOException, InterruptedException,
-                                                     URISyntaxException {
+        URISyntaxException {
         JsonObject definitions = HttpClientUtil.getJson(JAKARTA_LEMON_CONFIG_URL,
             JsonReader::readObject);
         this.columnAnnotationProperties = definitions.getJsonObject(ANNOTATION_PROPS).getJsonObject(
@@ -235,7 +292,7 @@ public class JpaPersistenceHandler {
     private void createPersistenceXml() {
         try {
             this.persistenceXmlPath = Paths.get(DOT, INFRASTRUCTURE, SRC, MAIN, RESOURCES, META_INF,
-                PERSISTENCE_FILE_NAME).
+                    PERSISTENCE_FILE_NAME).
                 normalize();
             Files.createDirectories(persistenceXmlPath.getParent());
 
@@ -283,9 +340,9 @@ public class JpaPersistenceHandler {
                         DocumentXmlUtil.createElement(persistenceXml, persistenceUnitElement,
                             "jta-data-source", dataSourceName);
                         DocumentXmlUtil.createElement(persistenceXml, persistenceUnitElement,
-                            "properties").flatMap(propertiesElement -> DocumentXmlUtil.
-                            createElement(persistenceXml,
-                                propertiesElement, "property"))
+                                "properties").flatMap(propertiesElement -> DocumentXmlUtil.
+                                createElement(persistenceXml,
+                                    propertiesElement, "property"))
                             .ifPresent(propertyElement -> {
                                 propertyElement.setAttribute("name",
                                     "jakarta.persistence.schema-generation.database.action");
@@ -301,26 +358,60 @@ public class JpaPersistenceHandler {
     public void createEntityManagerProvider(JsonObject projectInfo,
                                             String persistenceUnitName) {
         try {
-            var javaFileBuilder = new JavaFileBuilder()
-                .setModulePath(projectInfo.getString(INFRASTRUCTURE))
-                .setPackage(projectInfo.getString(PACKAGE), INFRASTRUCTURE, ADAPTERS)
-                .addClassAnnotation("ApplicationScoped")
-                .addImportClass("jakarta.enterprise.context.ApplicationScoped")
-                .addImportClass("jakarta.enterprise.inject.Produces")
-                .addImportClass("jakarta.persistence.PersistenceContext")
-                .addImportClass("jakarta.persistence.EntityManager")
-                .setClassName("JpaProvider")
-                .addVariableDeclaration("EntityManager", "em",
-                    "Produces @PersistenceContext(unitName = \"%s\")".formatted(
-                        persistenceUnitName));
-            javaFileBuilder.build();
+            var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), INFRASTRUCTURE,
+                ADAPTERS);
+            var entityManagerClassType = ClassTypeBuilder.newBuilder()
+                .packageName("jakarta.persistence")
+                .className("EntityManager")
+                .build();
+            var produceAnnotation = AnnotationTypeBuilder.newBuilder()
+                .classType(
+                    ClassTypeBuilder.newBuilder()
+                        .packageName("jakarta.enterprise.inject")
+                        .className("Produces")
+                        .build()
+                )
+                .build();
+            var applicationScopedAnnotation = AnnotationTypeBuilder.newBuilder()
+                .classType(
+                    ClassTypeBuilder.newBuilder()
+                        .packageName("jakarta.enterprise.context")
+                        .className("ApplicationScoped")
+                        .build()
+                )
+                .build();
+            var persistenceContextAnnotation = AnnotationTypeBuilder.newBuilder()
+                .classType(
+                    ClassTypeBuilder.newBuilder()
+                        .packageName("jakarta.persistence")
+                        .className("PersistenceContext")
+                        .build()
+                )
+                .addAttribute("unitName", persistenceUnitName)
+                .build();
+            var jpaProviderDefinition = DefinitionBuilder.createClassBuilder(packageName, "JpaProvider")
+                .addField(FieldDefinitionBuilder.createBuilder()
+                    .fieldName("em")
+                    .classType(entityManagerClassType)
+                    .addModifier(Modifier.PRIVATE)
+                    .addAnnotationType(produceAnnotation)
+                    .addAnnotationType(persistenceContextAnnotation)
+                    .build())
+                .addAnnotationType(applicationScopedAnnotation)
+                .addModifier(Modifier.PUBLIC)
+                .build();
+
+            var destinationPath = Paths.get(projectInfo.getString(INFRASTRUCTURE), SRC, MAIN, JAVA);
+            var javaFile = com.camucode.gen.JavaFileBuilder.createBuilder(jpaProviderDefinition, destinationPath)
+                .build();
+            javaFile.writeFile();
         } catch (IOException ex) {
             log.error(ex.getMessage(), ex);
         }
     }
 
     private void addTransactionApiDependency() throws URISyntaxException, IOException,
-                                                      InterruptedException {
+        InterruptedException {
         DependenciesUtil.getLastVersionDependency(
             MAVEN_QUERY_TRANSACTION_API
         ).ifPresent(
