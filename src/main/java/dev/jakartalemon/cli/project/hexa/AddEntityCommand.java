@@ -106,9 +106,7 @@ public class AddEntityCommand implements Callable<Integer> {
         jpaPersistenceHandler.createEntityClass(projectInfo, key, definition);
         if (definition.containsKey(MAP_TO_MODEL)) {
             infrastructureModuleHandler.createMapper(
-                projectInfo.getString(PACKAGE),
-                projectInfo.getString(INFRASTRUCTURE),
-                definition.getString(MAP_TO_MODEL),
+                projectInfo, definition.getString(MAP_TO_MODEL),
                 key
             );
         }

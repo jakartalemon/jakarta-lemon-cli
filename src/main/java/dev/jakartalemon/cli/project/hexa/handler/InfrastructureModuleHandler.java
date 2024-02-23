@@ -15,13 +15,19 @@
  */
 package dev.jakartalemon.cli.project.hexa.handler;
 
+import com.camucode.gen.DefinitionBuilder;
+import com.camucode.gen.FieldDefinitionBuilder;
+import com.camucode.gen.InterfaceDefinitionBuilder;
+import com.camucode.gen.MethodDefinitionBuilder;
+import com.camucode.gen.type.AnnotationTypeBuilder;
+import com.camucode.gen.type.ClassTypeBuilder;
+import com.camucode.gen.values.Modifier;
 import dev.jakartalemon.cli.model.BuildModel;
 import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.util.DependenciesUtil;
 import dev.jakartalemon.cli.util.DocumentXmlUtil;
 import dev.jakartalemon.cli.util.FileClassUtil;
 import dev.jakartalemon.cli.util.HttpClientUtil;
-import dev.jakartalemon.cli.util.JavaFileBuilder;
 import dev.jakartalemon.cli.util.JsonFileUtil;
 import dev.jakartalemon.cli.util.PomUtil;
 import jakarta.json.Json;
@@ -55,6 +61,7 @@ import static dev.jakartalemon.cli.util.Constants.JAKARTA_CDI_API;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_CDI_API_VERSION_KEY;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_ENTERPRISE;
 import static dev.jakartalemon.cli.util.Constants.JAR;
+import static dev.jakartalemon.cli.util.Constants.JAVA;
 import static dev.jakartalemon.cli.util.Constants.LOMBOK_DEPENDENCY;
 import static dev.jakartalemon.cli.util.Constants.MAIN;
 import static dev.jakartalemon.cli.util.Constants.MAPPER;
@@ -102,7 +109,7 @@ public class InfrastructureModuleHandler {
             List<String> lines = new ArrayList<>();
             var packageName
                 = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), INFRASTRUCTURE,
-                    ADAPTERS);
+                ADAPTERS);
             lines.add(TEMPLATE_2_STRING_COMMA.formatted(PACKAGE, packageName));
             lines.add(EMPTY);
             lines.add("import jakarta.annotation.sql.DataSourceDefinition;");
@@ -115,7 +122,7 @@ public class InfrastructureModuleHandler {
             props.forEach(prop -> {
                 if (connectionInfo.containsKey(prop)) {
                     lines.add("%s%s = \"%s\",".formatted(StringUtils.repeat(SPACE,
-                        TAB_SIZE), prop,
+                            TAB_SIZE), prop,
                         connectionInfo.getString(prop)));
                 }
             });
@@ -139,28 +146,28 @@ public class InfrastructureModuleHandler {
     public void createDatabaseConfig(File file) {
         JsonFileUtil.getFileJson(file.toPath())
             .ifPresent(config -> JsonFileUtil.getProjectInfo().ifPresent(projectInfo -> {
-            try {
-                var storageType = config.getString("storageType");
-                var configDb = databasesConfigs.getJsonObject(storageType);
-                log.debug("storageType:{}", storageType);
-                log.debug("configDb:{}", configDb);
+                try {
+                    var storageType = config.getString("storageType");
+                    var configDb = databasesConfigs.getJsonObject(storageType);
+                    log.debug("storageType:{}", storageType);
+                    log.debug("configDb:{}", configDb);
 
-                DependenciesUtil.getLastVersionDependency(configDb.getString(
-                    "search")).ifPresent(dependency -> PomUtil.getInstance()
-                    .addDependency(dependency, INFRASTRUCTURE));
-                var dataSourceClass = configDb.getString("datasource");
-                var connectionInfo = config.getJsonObject("connectionInfo");
-                var connectionType = config.getString("connectionType");
-                switch (connectionType) {
-                    case "DataSourceEmbedded" ->
-                        createDataSourceClass(projectInfo, dataSourceClass, connectionInfo);
+                    DependenciesUtil.getLastVersionDependency(configDb.getString(
+                        "search")).ifPresent(dependency -> PomUtil.getInstance()
+                        .addDependency(dependency, INFRASTRUCTURE));
+                    var dataSourceClass = configDb.getString("datasource");
+                    var connectionInfo = config.getJsonObject("connectionInfo");
+                    var connectionType = config.getString("connectionType");
+                    switch (connectionType) {
+                        case "DataSourceEmbedded" ->
+                            createDataSourceClass(projectInfo, dataSourceClass, connectionInfo);
+                    }
+
+                } catch (InterruptedException | IOException | URISyntaxException e) {
+                    log.error(e.getMessage(), e);
+
                 }
-
-            } catch (InterruptedException | IOException | URISyntaxException e) {
-                log.error(e.getMessage(), e);
-
-            }
-        }));
+            }));
 
     }
 
@@ -190,14 +197,14 @@ public class InfrastructureModuleHandler {
                         ARTIFACT_ID, DOMAIN,
                         VERSION, PROJECT_VERSION
                     ), Map.of(
-                    GROUP_ID, JAKARTA_ENTERPRISE,
-                    ARTIFACT_ID, JAKARTA_CDI_API,
-                    VERSION, "${%s}".formatted(JAKARTA_CDI_API_VERSION_KEY)
-                ), Map.of(
-                    GROUP_ID, JAKARTA_ANNOTATION,
-                    ARTIFACT_ID, JAKARTA_ANNOTATION_API,
-                    VERSION, "${%s}".formatted(JAKARTA_ANNOTATION_API_VERSION_KEY)
-                ))
+                        GROUP_ID, JAKARTA_ENTERPRISE,
+                        ARTIFACT_ID, JAKARTA_CDI_API,
+                        VERSION, "${%s}".formatted(JAKARTA_CDI_API_VERSION_KEY)
+                    ), Map.of(
+                        GROUP_ID, JAKARTA_ANNOTATION,
+                        ARTIFACT_ID, JAKARTA_ANNOTATION_API,
+                        VERSION, "${%s}".formatted(JAKARTA_ANNOTATION_API_VERSION_KEY)
+                    ))
             ).buildModel(
                 BuildModel.builder()
                     .plugins(Json.createArrayBuilder()
@@ -243,7 +250,7 @@ public class InfrastructureModuleHandler {
             documentElement.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
             documentElement.setAttribute("xsi:schemaLocation",
                 "http://java.sun.com/xml/ns/javaee http://java.sun"
-                + ".com/xml/ns/javaee/beans_1_0.xsd");
+                    + ".com/xml/ns/javaee/beans_1_0.xsd");
             documentElement.setTextContent(SPACE);
             var descriptorPath = Paths.get(modulePath, SRC, MAIN, RESOURCES, META_INF, "beans.xml");
             Files.createDirectories(descriptorPath.getParent());
@@ -253,34 +260,64 @@ public class InfrastructureModuleHandler {
         }
     }
 
-    public void createMapper(String packageName,
-                             String infrastructurePath,
-                             String modelName,
+    public void createMapper(JsonObject projectInfo, String modelName,
                              String entityName) {
         try {
-            var classNameMapper = modelName + "Mapper";
-            var modelPackage = packageName + '.' + DOMAIN + '.' + MODEL + '.' + modelName;
-            var infrastructurePackage = packageName + '.' + INFRASTRUCTURE + '.' + ADAPTERS + '.' + ENTITIES + '.' + entityName;
-            var javaFileBuilder = new JavaFileBuilder().setClassName(classNameMapper)
-                .setPackage(packageName, INFRASTRUCTURE, MAPPER)
-                .isInterface(true)
-                .addVariableDeclaration(classNameMapper,
-                    "INSTANCE = Mappers.getMapper(%s.class)".formatted(classNameMapper), null)
-                .setModulePath(infrastructurePath)
-                .addClassAnnotation("Mapper")
-                .addImportClass("org.mapstruct.Mapper")
-                .addImportClass("org.mapstruct.factory.Mappers")
-                .addImportClass(modelPackage)
-                .addImportClass(infrastructurePackage)
-                .addMethod("entityToModel",
-                    Json.createObjectBuilder(
-                        Map.of(StringUtils.uncapitalize(entityName), entityName)
-                    ).build(), modelName, null)
-                .addMethod("modelToEntity", Json.createObjectBuilder(
-                    Map.of(StringUtils.uncapitalize(modelName), modelName)
-                ).build(), entityName, null);
+            var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), INFRASTRUCTURE,
+                MAPPER);
+            var adapterPackageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), INFRASTRUCTURE,
+                ADAPTERS);
+            var modelPackageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN,
+                MODEL);
+            var annotationMapper = AnnotationTypeBuilder.newBuilder()
+                .classType(
+                    ClassTypeBuilder.newBuilder()
+                        .packageName("org.mapstruct")
+                        .className("Mapper")
+                        .build()
+                )
+                .build();
+            var entity = ClassTypeBuilder.newBuilder()
+                .packageName(adapterPackageName)
+                .className(entityName)
+                .build();
+            var model = ClassTypeBuilder.newBuilder()
+                .packageName(modelPackageName)
+                .className(modelName)
+                .build();
+            var mapperName = modelName + "Mapper";
+            var mapper = ClassTypeBuilder.newBuilder().className(mapperName).build();
+            var entityToModelMethod = MethodDefinitionBuilder.createBuilder()
+                .name("entityToModel")
+                .returnClassType(model)
+                .isAbstract(true)
+                .addParameter(StringUtils.uncapitalize(entityName), entity)
+                .build();
+            var modelToEntityMethod = MethodDefinitionBuilder.createBuilder()
+                .name("modelToEntity")
+                .returnClassType(entity)
+                .isAbstract(true)
+                .addParameter(StringUtils.uncapitalize(modelName), model)
+                .build();
 
-            javaFileBuilder.build();
+            var mapperDefinition = DefinitionBuilder.createInterfaceBuilder(
+                    packageName,
+                    mapperName)
+                .addField(FieldDefinitionBuilder.createBuilder()
+                    .fieldName("INSTANCE")
+                    .classType(mapper)
+                    .defaultValue("org.mapstruct.factory.Mappers.getMapper(%s.class)".formatted(mapperName))
+                    .build())
+                .addModifier(Modifier.PUBLIC)
+                .addAnnotationType(annotationMapper);
+
+            ((InterfaceDefinitionBuilder) mapperDefinition).addMethods(List.of(entityToModelMethod,
+                modelToEntityMethod));
+
+            var destinationPath = Paths.get(projectInfo.getString(INFRASTRUCTURE), SRC, MAIN, JAVA);
+            var javaFile = com.camucode.gen.JavaFileBuilder.createBuilder(mapperDefinition.build(), destinationPath)
+                .build();
+            javaFile.writeFile();
         } catch (IOException ex) {
             log.error(ex.getMessage(), ex);
         }
