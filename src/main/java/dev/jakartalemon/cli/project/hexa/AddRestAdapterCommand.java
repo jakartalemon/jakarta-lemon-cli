@@ -17,12 +17,16 @@ package dev.jakartalemon.cli.project.hexa;
 
 import dev.jakartalemon.cli.project.hexa.handler.ApplicationModuleHandler;
 import dev.jakartalemon.cli.project.hexa.handler.RestAdapterHandler;
+import dev.jakartalemon.cli.util.JsonFileUtil;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonString;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import picocli.CommandLine;
 
 import java.io.File;
 
-import dev.jakartalemon.cli.util.JsonFileUtil;
-import lombok.extern.slf4j.Slf4j;
-import picocli.CommandLine;
 
 /**
  * @author Diego Silva mailto:diego.silva@apuntesdejava.com
@@ -48,11 +52,11 @@ public class AddRestAdapterCommand implements Runnable {
         var restAdapterHandler = RestAdapterHandler.getInstance();
         restAdapterHandler.loadOpenApiDefinition(file);
         JsonFileUtil.getProjectInfo().ifPresent(projectInfo -> {
+            restAdapterHandler.createApplicationPath(projectInfo);
             restAdapterHandler.setModelPackage(projectInfo);
             restAdapterHandler.createComponents(
                 definitions -> appModuleHandler.createRecords(definitions, projectInfo));
             restAdapterHandler.createResourcesPaths(projectInfo);
-            restAdapterHandler.createApplicationPath(projectInfo);
         });
 
     }

@@ -94,7 +94,7 @@ public class CreateHexagonalProject {
             ));
         PomUtil.getInstance().createPom(projectPath, projectPom.build());
 
-        var domainPath = DomainModuleHandler.getInstance().createDomainModule(projectPath, groupId,
+        var domainPath = DomainModuleHandler.createDomainModule(projectPath, groupId,
             artifactId, version,
             packageName);
         var appPath = ApplicationModuleHandler.getInstance().createApplicationModule(projectPath,
@@ -102,7 +102,7 @@ public class CreateHexagonalProject {
             artifactId,
             version);
 
-        var infraPath = InfrastructureModuleHandler.getInstance().
+        var infraPath = InfrastructureModuleHandler.
             createInfrastructureModule(projectPath,
                 groupId, artifactId, version,
                 packageName);

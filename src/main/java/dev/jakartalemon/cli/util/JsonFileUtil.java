@@ -36,7 +36,6 @@ public class JsonFileUtil {
     }
 
     public static Optional<JsonObject> getFileJson(Path path) {
-
         if (!Files.exists(path)) {
             log.error("File not found: {}", path.getFileName());
             return Optional.empty();

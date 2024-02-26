@@ -15,6 +15,10 @@
  */
 package dev.jakartalemon.cli.project.hexa.handler;
 
+import com.camucode.gen.DefinitionBuilder;
+import com.camucode.gen.type.AnnotationTypeBuilder;
+import com.camucode.gen.type.ClassTypeBuilder;
+import com.camucode.gen.values.Modifier;
 import dev.jakartalemon.cli.model.ResourceDto;
 import dev.jakartalemon.cli.util.Constants;
 import dev.jakartalemon.cli.util.JavaFileBuilder;
@@ -35,6 +39,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -46,6 +51,8 @@ import static dev.jakartalemon.cli.util.Constants.ANNOTATION_FIELD;
 import static dev.jakartalemon.cli.util.Constants.APPLICATION;
 import static dev.jakartalemon.cli.util.Constants.COMMA_SPACE;
 import static dev.jakartalemon.cli.util.Constants.DOUBLE_QUOTES_CHAR;
+import static dev.jakartalemon.cli.util.Constants.JAVA;
+import static dev.jakartalemon.cli.util.Constants.MAIN;
 import static dev.jakartalemon.cli.util.Constants.MODEL;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_EXAMPLES;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN;
@@ -54,9 +61,11 @@ import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN_QUERY;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_TYPE;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_TYPES;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
 import static dev.jakartalemon.cli.util.Constants.PATH_PARAM;
 import static dev.jakartalemon.cli.util.Constants.RESOURCES;
 import static dev.jakartalemon.cli.util.Constants.SLASH_CHAR;
+import static dev.jakartalemon.cli.util.Constants.SRC;
 import static dev.jakartalemon.cli.util.OpenApiUtil.getType;
 import static io.swagger.models.Method.DELETE;
 import static io.swagger.models.Method.GET;
@@ -108,20 +117,20 @@ public class RestAdapterHandler {
             var schemaDefinition = Json.createObjectBuilder();
             Optional.ofNullable(schema.getProperties())
                 .ifPresent(properties -> properties.forEach((propertyName, property) -> {
-                var propertySchema = (Schema<?>) property;
-                var propertyType = getType(propertySchema);
-                var fieldContent = Json.createObjectBuilder().add(OPEN_API_TYPE, propertyType);
-                Optional.ofNullable(propertySchema.getExamples()).ifPresent(examples -> {
-                    fieldContent.add(OPEN_API_EXAMPLES, Json.createArrayBuilder(examples.stream().
-                        map(
-                            Object::toString).toList()));
-                });
-                Optional.ofNullable(propertySchema.getTypes()).ifPresent(types -> {
-                    fieldContent.add(OPEN_API_TYPES, Json.createArrayBuilder(types));
-                });
+                    var propertySchema = (Schema<?>) property;
+                    var propertyType = getType(propertySchema);
+                    var fieldContent = Json.createObjectBuilder().add(OPEN_API_TYPE, propertyType);
+                    Optional.ofNullable(propertySchema.getExamples()).ifPresent(examples -> {
+                        fieldContent.add(OPEN_API_EXAMPLES, Json.createArrayBuilder(examples.stream().
+                            map(
+                                Object::toString).toList()));
+                    });
+                    Optional.ofNullable(propertySchema.getTypes()).ifPresent(types -> {
+                        fieldContent.add(OPEN_API_TYPES, Json.createArrayBuilder(types));
+                    });
 
-                schemaDefinition.add((String) propertyName, fieldContent);
-            }));
+                    schemaDefinition.add((String) propertyName, fieldContent);
+                }));
             jsonBuilder.add(schemaName, schemaDefinition);
 
         });
@@ -152,16 +161,31 @@ public class RestAdapterHandler {
 
     public void createApplicationPath(JsonObject projectInfo) {
         try {
-            var className = "ApplicationResource";
-            var javaFileBuilder
-                = new JavaFileBuilder().setClassName(className)
-                    .addImportClass("jakarta.ws.rs.ApplicationPath")
-                    .addImportClass("jakarta.ws.rs.core.Application")
-                    .addClassAnnotation("ApplicationPath(\"/api\")")
-                    .setModulePath(projectInfo.getString(APPLICATION))
-                    .setExtendClass("Application")
-                    .setPackage(projectInfo.getString(PACKAGE), APPLICATION, RESOURCES);
-            javaFileBuilder.build();
+            var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), APPLICATION, RESOURCES);
+            var applicationPathAnnotation = AnnotationTypeBuilder.newBuilder()
+                .classType(
+                    ClassTypeBuilder.newBuilder()
+                        .className("ApplicationPath")
+                        .packageName("jakarta.ws.rs")
+                        .build()
+                )
+                .addAttribute("value", "/api")
+                .build();
+            var applicationType = ClassTypeBuilder.newBuilder()
+                .className("Application")
+                .packageName("jakarta.ws.rs.core")
+                .build();
+            var applicationResourceDefinition = DefinitionBuilder
+                .createClassBuilder(packageName, "ApplicationResource")
+                .classExtended(applicationType)
+                .addAnnotationType(applicationPathAnnotation)
+                .addModifier(Modifier.PUBLIC)
+                .build();
+            var destinationPath = Paths.get(projectInfo.getString(APPLICATION), SRC, MAIN, JAVA);
+            var javaFile = com.camucode.gen.JavaFileBuilder.createBuilder(applicationResourceDefinition,
+                    destinationPath)
+                .build();
+            javaFile.writeFile();
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }
@@ -184,17 +208,17 @@ public class RestAdapterHandler {
             var subResourceName = StringUtils.substringAfter(dto.pathName(), pathName);
             Optional.ofNullable(pathItem.getGet()).
                 ifPresent(getOperation -> createMethod(getOperation, javaFileBuilder, GET.name(),
-                parameters, subResourceName));
+                    parameters, subResourceName));
             Optional.ofNullable(pathItem.getPost()).
                 ifPresent(postOperation -> createMethod(postOperation, javaFileBuilder, POST.name(),
-                parameters, subResourceName));
+                    parameters, subResourceName));
             Optional.ofNullable(pathItem.getDelete()).
                 ifPresent(
                     deleteOperation -> createMethod(deleteOperation, javaFileBuilder, DELETE.name(),
                         parameters, subResourceName));
             Optional.ofNullable(pathItem.getPut()).
                 ifPresent(putOperation -> createMethod(putOperation, javaFileBuilder, PUT.name(),
-                parameters, subResourceName));
+                    parameters, subResourceName));
         });
 
         try {
@@ -221,8 +245,8 @@ public class RestAdapterHandler {
                 responses.forEach((key, response) -> {
                     Content content = response.getContent();
                     String annotation = StringUtils.join(content.keySet().stream().
-                        map(str -> (DOUBLE_QUOTES_CHAR + str
-                        + DOUBLE_QUOTES_CHAR)).toList(),
+                            map(str -> (DOUBLE_QUOTES_CHAR + str
+                                + DOUBLE_QUOTES_CHAR)).toList(),
                         Constants.COMMA);
                     annotations.add("Produces({%s})".formatted(annotation));
                 });
@@ -232,7 +256,7 @@ public class RestAdapterHandler {
                 javaFileBuilder.addImportClass("jakarta.ws.rs.Consumes");
                 Optional.ofNullable(requestBody.getContent()).ifPresent(content -> {
                     String annotation = StringUtils.join(content.keySet().stream().
-                        map(str -> ('"' + str + '"')).toList(),
+                            map(str -> ('"' + str + '"')).toList(),
                         Constants.COMMA);
                     annotations.add("Consumes({%s})".formatted(annotation));
                 });
@@ -243,7 +267,7 @@ public class RestAdapterHandler {
         Optional.ofNullable(operation.getResponses()).ifPresent(responses -> createResponses(
             responses, javaFileBuilder, body));
         javaFileBuilder.addMethod(operationId, params.build(), "void", null, annotations, body.
-            toString())
+                toString())
             .addImportClass("jakarta.ws.rs." + method);
     }
 
@@ -308,22 +332,22 @@ public class RestAdapterHandler {
         var params = Json.createObjectBuilder();
         Optional.ofNullable(parameters).
             ifPresent(parametersList -> parametersList.forEach(parameter -> {
-            String entryName = parameter.getName();
-            String type
-                = OpenApiUtil.openApiType2JavaType(OpenApiUtil.getType(parameter.getSchema()));
-            var paramDetail = Json.createObjectBuilder(
-                Map.of(
-                    OPEN_API_TYPE, type,
-                    OPEN_API_IN,
-                    StringUtils.defaultIfEmpty(parameter.getIn(), OPEN_API_IN_QUERY)
-                )
-            );
-            if (StringUtils.equals(parameter.getIn(), OPEN_API_IN_PATH)) {
-                paramDetail.add(PATH_PARAM, resourceName);
-            }
-            params.add(entryName, paramDetail);
+                String entryName = parameter.getName();
+                String type
+                    = OpenApiUtil.openApiType2JavaType(OpenApiUtil.getType(parameter.getSchema()));
+                var paramDetail = Json.createObjectBuilder(
+                    Map.of(
+                        OPEN_API_TYPE, type,
+                        OPEN_API_IN,
+                        StringUtils.defaultIfEmpty(parameter.getIn(), OPEN_API_IN_QUERY)
+                    )
+                );
+                if (StringUtils.equals(parameter.getIn(), OPEN_API_IN_PATH)) {
+                    paramDetail.add(PATH_PARAM, resourceName);
+                }
+                params.add(entryName, paramDetail);
 
-        }));
+            }));
         return params;
     }
 

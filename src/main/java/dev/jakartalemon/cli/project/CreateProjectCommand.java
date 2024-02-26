@@ -100,7 +100,7 @@ public class CreateProjectCommand implements Runnable {
             }
             switch (archetype) {
                 case HEXA ->
-                    CreateHexagonalProject.getInstance()
+                    CreateHexagonalProject
                         .createProject(created, groupId, artifactId, packageName).ifPresent(
                         projectInfo -> {
                             try {
