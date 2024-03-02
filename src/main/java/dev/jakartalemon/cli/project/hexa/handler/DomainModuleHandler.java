@@ -20,6 +20,8 @@ import com.camucode.gen.DefinitionBuilderWithMethods;
 import com.camucode.gen.FieldDefinitionBuilder;
 import com.camucode.gen.JavaFileBuilder;
 import com.camucode.gen.MethodDefinitionBuilder;
+import com.camucode.gen.ParameterDefinitionBuilder;
+import com.camucode.gen.type.AnnotationTypeBuilder;
 import com.camucode.gen.type.ClassType;
 import com.camucode.gen.type.ClassTypeBuilder;
 import com.camucode.gen.type.JavaType;
@@ -164,12 +166,29 @@ public class DomainModuleHandler {
             var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, USECASE);
             var repositoryPackageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, REPOSITORY);
             var classTestName = "%sTest".formatted(className);
+            var mockAnnotation = AnnotationTypeBuilder.newBuilder()
+                .classType(
+                    ClassTypeBuilder.newBuilder()
+                        .packageName("org.mockito")
+                        .className("Mock")
+                        .build()
+                )
+                .build();
+            var injectMockAnnotation = AnnotationTypeBuilder.newBuilder()
+                .classType(
+                    ClassTypeBuilder.newBuilder()
+                        .packageName("org.mockito")
+                        .className("InjectMocks")
+                        .build()
+                )
+                .build();
             //add repositories
             List<FieldDefinitionBuilder.FieldDefinition> fieldsDefinition = classDefinition.getJsonArray(INJECTS)
                 .stream()
                 .map(jsonValue -> ((JsonString) jsonValue).getString()).map(
                     repositoryInject -> FieldDefinitionBuilder.createBuilder()
                         .addModifier(Modifier.PRIVATE)
+                        .addAnnotationType(mockAnnotation)
                         .fieldName(
                             StringUtils.uncapitalize(
                                 repositoryInject))
@@ -186,6 +205,7 @@ public class DomainModuleHandler {
             fieldsDefinition.add(
                 FieldDefinitionBuilder.createBuilder()
                     .addModifier(Modifier.PRIVATE)
+                    .addAnnotationType(injectMockAnnotation)
                     .fieldName(
                         StringUtils.uncapitalize(
                             className))
@@ -196,8 +216,17 @@ public class DomainModuleHandler {
                     )
                     .build()
             );
+            var extendWithAnnotation = AnnotationTypeBuilder.newBuilder()
+                .classType(
+                    ClassTypeBuilder.newBuilder()
+                        .packageName("org.junit.jupiter.api.extension")
+                        .className("ExtendWith")
+                        .build()
+                )
+                .build();
             var definition = DefinitionBuilder.createClassBuilder(packageName, classTestName)
                 .addModifier(Modifier.PUBLIC)
+                .addAnnotationType(extendWithAnnotation)
                 .addFields(fieldsDefinition)
                 .build();
             var destinationPath = Paths.get(projectInfo.getString(DOMAIN), SRC, TEST, JAVA);
@@ -270,7 +299,10 @@ public class DomainModuleHandler {
                                 .build();
                         }
 
-                        methodDefinitionBuilder.addParameter(parameterName, typeDefinition);
+                        methodDefinitionBuilder.addParameter(ParameterDefinitionBuilder.newBuilder()
+                            .parameterName(parameterName)
+                            .parameterType(typeDefinition)
+                            .build());
                     });
                     return methodDefinitionBuilder.build();
                 }).collect(toList());
@@ -452,7 +484,13 @@ public class DomainModuleHandler {
                                     .packageName(modelPackage)
                                     .build();
                                 String parameterName = StringUtils.uncapitalize(parameter);
-                                methodBuilder.addParameter(parameterName, parameterType);
+
+                                methodBuilder.addParameter(
+                                    ParameterDefinitionBuilder.newBuilder().
+                                        parameterName(parameterName)
+                                        .parameterType(parameterType)
+                                        .build()
+                                );
                             }
                         });
                 }

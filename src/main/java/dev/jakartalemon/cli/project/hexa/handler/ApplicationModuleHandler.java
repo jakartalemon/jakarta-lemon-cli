@@ -15,12 +15,15 @@
  */
 package dev.jakartalemon.cli.project.hexa.handler;
 
+import com.camucode.gen.DefinitionBuilder;
+import com.camucode.gen.FieldDefinitionBuilder;
+import com.camucode.gen.JavaFileBuilder;
+import com.camucode.gen.values.Modifier;
 import dev.jakartalemon.cli.model.BuildModel;
 import dev.jakartalemon.cli.model.PomModel;
 import dev.jakartalemon.cli.util.Constants;
 import dev.jakartalemon.cli.util.DependenciesUtil;
 import dev.jakartalemon.cli.util.PomUtil;
-import dev.jakartalemon.cli.util.RecordFileBuilder;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
@@ -28,16 +31,21 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static dev.jakartalemon.cli.util.Constants.APPLICATION;
+import static dev.jakartalemon.cli.util.Constants.JAVA;
+import static dev.jakartalemon.cli.util.Constants.MAIN;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_JAKARTA_WS_RS_API;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_RXJAVA;
 import static dev.jakartalemon.cli.util.Constants.MODEL;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_TYPE;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
+import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
+import static dev.jakartalemon.cli.util.Constants.SRC;
 import static dev.jakartalemon.cli.util.OpenApiUtil.openApiType2JavaType;
 
 /**
@@ -64,17 +72,22 @@ public class ApplicationModuleHandler {
                               JsonObject properties,
                               JsonObject projectInfo) {
         try {
-            var packageName = projectInfo.getString(PACKAGE);
-            var recordFileBuilder = new RecordFileBuilder().setFileName(className)
-                .setPackage(packageName, APPLICATION, MODEL);
-            properties.forEach((property, fieldContent) -> {
-                var propertyType = fieldContent.asJsonObject().getString(OPEN_API_TYPE);
-                recordFileBuilder.addVariableDeclaration(
-                    openApiType2JavaType(propertyType), property);
-            });
-
-            recordFileBuilder.setModulePath(projectInfo.getString(APPLICATION))
-                .setClassName(className).setModule(APPLICATION).build();
+            var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), APPLICATION,
+                MODEL);
+            var recordBuilder = DefinitionBuilder.createRecordBuilder(packageName, className);
+            var fields = properties.entrySet().stream().map(entry -> {
+                var fieldName = entry.getKey();
+                var propertyType = entry.getValue().asJsonObject().getString(OPEN_API_TYPE);
+                var javaType = openApiType2JavaType(propertyType);
+                return FieldDefinitionBuilder.createBuilder().fieldName(fieldName)
+                    .nativeType(javaType)
+                    .build();
+            }).toList();
+            recordBuilder.addFields(fields).addModifier(Modifier.PUBLIC);
+            var destinationPath = Paths.get(projectInfo.getString(APPLICATION), SRC, MAIN, JAVA);
+            var javaFile = JavaFileBuilder.createBuilder(recordBuilder.build(), destinationPath)
+                .build();
+            javaFile.writeFile();
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }
@@ -85,11 +98,11 @@ public class ApplicationModuleHandler {
                                                   String artifactId,
                                                   String version) {
         PomModel.PomModelBuilder modulePom = PomModel.builder().parent(
-            Map.of(
-                Constants.GROUP_ID, groupId,
-                Constants.ARTIFACT_ID, artifactId,
-                Constants.VERSION, version)
-        ).artifactId(Constants.APPLICATION)
+                Map.of(
+                    Constants.GROUP_ID, groupId,
+                    Constants.ARTIFACT_ID, artifactId,
+                    Constants.VERSION, version)
+            ).artifactId(Constants.APPLICATION)
             .packaging(Constants.WAR)
             .properties(
                 Map.of(

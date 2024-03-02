@@ -18,11 +18,7 @@ package dev.jakartalemon.cli.project.hexa;
 import dev.jakartalemon.cli.project.hexa.handler.ApplicationModuleHandler;
 import dev.jakartalemon.cli.project.hexa.handler.RestAdapterHandler;
 import dev.jakartalemon.cli.util.JsonFileUtil;
-import jakarta.json.Json;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonString;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import picocli.CommandLine;
 
 import java.io.File;

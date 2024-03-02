@@ -19,6 +19,7 @@ import com.camucode.gen.DefinitionBuilder;
 import com.camucode.gen.FieldDefinitionBuilder;
 import com.camucode.gen.InterfaceDefinitionBuilder;
 import com.camucode.gen.MethodDefinitionBuilder;
+import com.camucode.gen.ParameterDefinitionBuilder;
 import com.camucode.gen.type.AnnotationTypeBuilder;
 import com.camucode.gen.type.ClassTypeBuilder;
 import com.camucode.gen.values.Modifier;
@@ -291,13 +292,20 @@ public class InfrastructureModuleHandler {
                 .name("entityToModel")
                 .returnClassType(model)
                 .isAbstract(true)
-                .addParameter(StringUtils.uncapitalize(entityName), entity)
+                .addParameter(ParameterDefinitionBuilder.newBuilder()
+                    .parameterType(entity)
+                    .parameterName(StringUtils.uncapitalize(entityName))
+                    .build())
                 .build();
             var modelToEntityMethod = MethodDefinitionBuilder.createBuilder()
                 .name("modelToEntity")
                 .returnClassType(entity)
                 .isAbstract(true)
-                .addParameter(StringUtils.uncapitalize(modelName), model)
+                .addParameter(
+                    ParameterDefinitionBuilder.newBuilder()
+                        .parameterName(StringUtils.uncapitalize(modelName))
+                        .parameterType(model).build()
+                )
                 .build();
 
             var mapperDefinition = DefinitionBuilder.createInterfaceBuilder(

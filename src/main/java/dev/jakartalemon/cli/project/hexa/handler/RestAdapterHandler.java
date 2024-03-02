@@ -15,13 +15,18 @@
  */
 package dev.jakartalemon.cli.project.hexa.handler;
 
+import com.camucode.gen.ClassDefinitionBuilder;
 import com.camucode.gen.DefinitionBuilder;
+import com.camucode.gen.JavaFileBuilder;
+import com.camucode.gen.MethodDefinitionBuilder;
+import com.camucode.gen.ParameterDefinition;
+import com.camucode.gen.ParameterDefinitionBuilder;
 import com.camucode.gen.type.AnnotationTypeBuilder;
 import com.camucode.gen.type.ClassTypeBuilder;
+import com.camucode.gen.type.NativeTypeBuilder;
 import com.camucode.gen.values.Modifier;
 import dev.jakartalemon.cli.model.ResourceDto;
 import dev.jakartalemon.cli.util.Constants;
-import dev.jakartalemon.cli.util.JavaFileBuilder;
 import dev.jakartalemon.cli.util.OpenApiUtil;
 import io.swagger.parser.OpenAPIParser;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -32,7 +37,6 @@ import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
-import jakarta.json.JsonObjectBuilder;
 import jakarta.json.JsonString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -41,28 +45,25 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 
-import static dev.jakartalemon.cli.util.Constants.ANNOTATION_FIELD;
 import static dev.jakartalemon.cli.util.Constants.APPLICATION;
 import static dev.jakartalemon.cli.util.Constants.COMMA_SPACE;
-import static dev.jakartalemon.cli.util.Constants.DOUBLE_QUOTES_CHAR;
 import static dev.jakartalemon.cli.util.Constants.JAVA;
 import static dev.jakartalemon.cli.util.Constants.MAIN;
 import static dev.jakartalemon.cli.util.Constants.MODEL;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_EXAMPLES;
-import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN_PATH;
-import static dev.jakartalemon.cli.util.Constants.OPEN_API_IN_QUERY;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_TYPE;
 import static dev.jakartalemon.cli.util.Constants.OPEN_API_TYPES;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE;
 import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
-import static dev.jakartalemon.cli.util.Constants.PATH_PARAM;
 import static dev.jakartalemon.cli.util.Constants.RESOURCES;
 import static dev.jakartalemon.cli.util.Constants.SLASH_CHAR;
 import static dev.jakartalemon.cli.util.Constants.SRC;
@@ -117,20 +118,20 @@ public class RestAdapterHandler {
             var schemaDefinition = Json.createObjectBuilder();
             Optional.ofNullable(schema.getProperties())
                 .ifPresent(properties -> properties.forEach((propertyName, property) -> {
-                    var propertySchema = (Schema<?>) property;
-                    var propertyType = getType(propertySchema);
-                    var fieldContent = Json.createObjectBuilder().add(OPEN_API_TYPE, propertyType);
-                    Optional.ofNullable(propertySchema.getExamples()).ifPresent(examples -> {
-                        fieldContent.add(OPEN_API_EXAMPLES, Json.createArrayBuilder(examples.stream().
-                            map(
-                                Object::toString).toList()));
-                    });
-                    Optional.ofNullable(propertySchema.getTypes()).ifPresent(types -> {
-                        fieldContent.add(OPEN_API_TYPES, Json.createArrayBuilder(types));
-                    });
+                var propertySchema = (Schema<?>) property;
+                var propertyType = getType(propertySchema);
+                var fieldContent = Json.createObjectBuilder().add(OPEN_API_TYPE, propertyType);
+                Optional.ofNullable(propertySchema.getExamples()).ifPresent(examples -> {
+                    fieldContent.add(OPEN_API_EXAMPLES, Json.createArrayBuilder(examples.stream().
+                        map(
+                            Object::toString).toList()));
+                });
+                Optional.ofNullable(propertySchema.getTypes()).ifPresent(types -> {
+                    fieldContent.add(OPEN_API_TYPES, Json.createArrayBuilder(types));
+                });
 
-                    schemaDefinition.add((String) propertyName, fieldContent);
-                }));
+                schemaDefinition.add((String) propertyName, fieldContent);
+            }));
             jsonBuilder.add(schemaName, schemaDefinition);
 
         });
@@ -182,8 +183,8 @@ public class RestAdapterHandler {
                 .addModifier(Modifier.PUBLIC)
                 .build();
             var destinationPath = Paths.get(projectInfo.getString(APPLICATION), SRC, MAIN, JAVA);
-            var javaFile = com.camucode.gen.JavaFileBuilder.createBuilder(applicationResourceDefinition,
-                    destinationPath)
+            var javaFile = JavaFileBuilder.createBuilder(applicationResourceDefinition,
+                destinationPath)
                 .build();
             javaFile.writeFile();
         } catch (IOException e) {
@@ -194,94 +195,130 @@ public class RestAdapterHandler {
     private void createRestResourceBody(String pathName,
                                         List<ResourceDto> contents,
                                         JsonObject projectInfo) {
-        String className
-            = StringUtils.capitalize(StringUtils.substringAfter(pathName, SLASH_CHAR)) + "Resource";
-        JavaFileBuilder javaFileBuilder = new JavaFileBuilder().setClassName(className).
-            addImportClass("io.reactivex.rxjava3.core.Flowable").
-            addImportClass("jakarta.ws.rs.Path").
-            addImportClass("jakarta.ws.rs.container.AsyncResponse").
-            addImportClass("jakarta.ws.rs.container.Suspended").
-            addClassAnnotation("Path(\"%s\")".formatted(pathName));
-        contents.forEach(dto -> {
-            var pathItem = dto.pathItem();
-            var parameters = pathItem.getParameters();
-            var subResourceName = StringUtils.substringAfter(dto.pathName(), pathName);
-            Optional.ofNullable(pathItem.getGet()).
-                ifPresent(getOperation -> createMethod(getOperation, javaFileBuilder, GET.name(),
-                    parameters, subResourceName));
-            Optional.ofNullable(pathItem.getPost()).
-                ifPresent(postOperation -> createMethod(postOperation, javaFileBuilder, POST.name(),
-                    parameters, subResourceName));
-            Optional.ofNullable(pathItem.getDelete()).
-                ifPresent(
-                    deleteOperation -> createMethod(deleteOperation, javaFileBuilder, DELETE.name(),
-                        parameters, subResourceName));
-            Optional.ofNullable(pathItem.getPut()).
-                ifPresent(putOperation -> createMethod(putOperation, javaFileBuilder, PUT.name(),
-                    parameters, subResourceName));
-        });
-
         try {
-            javaFileBuilder.setModulePath(projectInfo.getString(APPLICATION))
-                .setPackage(projectInfo.getString(PACKAGE), APPLICATION, RESOURCES).build();
+            var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), APPLICATION, RESOURCES);
+            var pathResourceAnnotation = AnnotationTypeBuilder.newBuilder()
+                .classType(
+                    ClassTypeBuilder.newBuilder()
+                        .packageName("jakarta.ws.rs")
+                        .className("Path")
+                        .build()
+                )
+                .addAttribute("value", pathName)
+                .build();
+            String className = StringUtils.capitalize(StringUtils.substringAfter(pathName, SLASH_CHAR)) + "Resource";
+            var classResourceBuilder = DefinitionBuilder.createClassBuilder(packageName, className)
+                .addAnnotationType(pathResourceAnnotation)
+                .addModifier(Modifier.PUBLIC);
+
+            contents.forEach(dto -> {
+                var pathItem = dto.pathItem();
+                var parameters = pathItem.getParameters();
+                var subResourceName = StringUtils.substringAfter(dto.pathName(), pathName);
+                Optional.ofNullable(pathItem.getGet()).
+                    ifPresent(getOperation -> createMethod(getOperation,
+                    (ClassDefinitionBuilder) classResourceBuilder,
+                    GET.name(),
+                    parameters,
+                    subResourceName));
+                Optional.ofNullable(pathItem.getPost()).
+                    ifPresent(postOperation -> createMethod(postOperation,
+                    (ClassDefinitionBuilder) classResourceBuilder, POST.name(),
+                    parameters, subResourceName));
+                Optional.ofNullable(pathItem.getDelete()).
+                    ifPresent(
+                        deleteOperation -> createMethod(deleteOperation,
+                            (ClassDefinitionBuilder) classResourceBuilder, DELETE.name(),
+                            parameters, subResourceName));
+                Optional.ofNullable(pathItem.getPut()).
+                    ifPresent(putOperation -> createMethod(putOperation,
+                    (ClassDefinitionBuilder) classResourceBuilder,
+                    PUT.name(),
+                    parameters,
+                    subResourceName));
+            });
+
+            var destinationPath = Paths.get(projectInfo.getString(APPLICATION), SRC, MAIN, JAVA);
+            var javaFile = JavaFileBuilder.createBuilder(classResourceBuilder.build(), destinationPath)
+                .build();
+            javaFile.writeFile();
+
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }
     }
 
     private void createMethod(Operation operation,
-                              JavaFileBuilder javaFileBuilder,
-                              String method,
+                              ClassDefinitionBuilder classResourceBuilder, String method,
                               List<Parameter> parameters,
                               String resourceName) {
+        var methodDefinitionBuilder = MethodDefinitionBuilder
+            .createBuilder()
+            .addModifier(Modifier.PUBLIC)
+            .name(operation.getOperationId());
 
-        String operationId = operation.getOperationId();
-
-        List<String> annotations = new ArrayList<>();
-        annotations.add(method);
+        methodDefinitionBuilder.addAnnotationType(
+            AnnotationTypeBuilder.newBuilder()
+                .classType(
+                    ClassTypeBuilder.newBuilder()
+                        .packageName("jakarta.ws.rs")
+                        .className(method)
+                        .build()
+                )
+                .build()
+        );
         Optional.ofNullable(operation.getResponses()).
             ifPresent(responses -> {
-                javaFileBuilder.addImportClass("jakarta.ws.rs.Produces");
+                var producesAnnotationBuilder = AnnotationTypeBuilder.newBuilder()
+                    .classType(
+                        ClassTypeBuilder.newBuilder()
+                            .className("Produces")
+                            .packageName("jakarta.ws.rs")
+                            .build()
+                    );
+
                 responses.forEach((key, response) -> {
                     Content content = response.getContent();
                     String annotation = StringUtils.join(content.keySet().stream().
-                            map(str -> (DOUBLE_QUOTES_CHAR + str
-                                + DOUBLE_QUOTES_CHAR)).toList(),
+                        map("%s"::formatted).toList(),
                         Constants.COMMA);
-                    annotations.add("Produces({%s})".formatted(annotation));
+                    producesAnnotationBuilder.addAttribute("value", annotation);
                 });
+                methodDefinitionBuilder.addAnnotationType(producesAnnotationBuilder.build());
             });
         Optional.ofNullable(operation.getRequestBody())
             .ifPresent(requestBody -> {
-                javaFileBuilder.addImportClass("jakarta.ws.rs.Consumes");
+                var consumesAnnotationBuilder = AnnotationTypeBuilder.newBuilder()
+                    .classType(
+                        ClassTypeBuilder.newBuilder()
+                            .className("Consumes")
+                            .packageName("jakarta.ws.rs")
+                            .build()
+                    );
                 Optional.ofNullable(requestBody.getContent()).ifPresent(content -> {
                     String annotation = StringUtils.join(content.keySet().stream().
-                            map(str -> ('"' + str + '"')).toList(),
+                        map(("%s")::formatted).toList(),
                         Constants.COMMA);
-                    annotations.add("Consumes({%s})".formatted(annotation));
+                    consumesAnnotationBuilder.addAttribute("value", annotation);
                 });
+                methodDefinitionBuilder.addAnnotationType(consumesAnnotationBuilder.build());
 
             });
-        var params = createParametersToList(parameters, resourceName, operation, javaFileBuilder);
+        var params = createParametersToList(parameters, resourceName, operation, methodDefinitionBuilder);
+        methodDefinitionBuilder.parameters(params);
         var body = new StringBuilder();
         Optional.ofNullable(operation.getResponses()).ifPresent(responses -> createResponses(
-            responses, javaFileBuilder, body));
-        javaFileBuilder.addMethod(operationId, params.build(), "void", null, annotations, body.
-                toString())
-            .addImportClass("jakarta.ws.rs." + method);
+            responses, classResourceBuilder, body));
+        classResourceBuilder.addMethod(methodDefinitionBuilder.build());
+//        javaFileBuilder.addMethod(operationId, params.build(), "void", null, annotations, body.
+//                toString())
     }
 
-    private JsonObjectBuilder createParametersToList(List<Parameter> parameters,
-                                                     String resourceName,
-                                                     Operation operation,
-                                                     JavaFileBuilder javaFileBuilder) {
-        var params = convertParamsToList(parameters, resourceName)
-            .add("asyncResponse", Json.createObjectBuilder(
-                Map.of(
-                    OPEN_API_TYPE, "AsyncResponse",
-                    ANNOTATION_FIELD, "Suspended"
-                )
-            ));
+    private Collection<ParameterDefinition> createParametersToList(List<Parameter> parameters,
+                                                                   String resourceName,
+                                                                   Operation operation,
+                                                                   MethodDefinitionBuilder methodDefinitionBuilder) {
+        var params = convertParamsToList(parameters, resourceName, methodDefinitionBuilder);
         Optional.ofNullable(operation.getRequestBody()).ifPresent(requestBody -> {
             var paramsRequestBody
                 = requestBody.getContent().values().stream().map(mediaType -> StringUtils.
@@ -289,16 +326,15 @@ public class RestAdapterHandler {
                     mediaType.getSchema().get$ref(),
                     SLASH_CHAR)).toList();
             paramsRequestBody.forEach(item -> {
-                javaFileBuilder.addImportClass(modelPackage + '.' + item);
-                params.add(StringUtils.uncapitalize(item), item);
+//                javaFileBuilder.addImportClass(modelPackage + '.' + item);
+                //               params.add(StringUtils.uncapitalize(item), item);
             });
         });
         return params;
     }
 
     private void createResponses(ApiResponses responses,
-                                 JavaFileBuilder javaFileBuilder,
-                                 StringBuilder body) {
+                                 ClassDefinitionBuilder classResourceBuilder, StringBuilder body) {
         responses.forEach((key, response) -> {
             if (response.getContent() != null) {
                 var content = response.getContent();
@@ -307,14 +343,15 @@ public class RestAdapterHandler {
                         && mediaType.getSchema().get$ref() != null) {
                         var ref = mediaType.getSchema().get$ref();
                         var schemaName = StringUtils.substringAfterLast(ref, SLASH_CHAR);
-                        javaFileBuilder.addImportClass(modelPackage + '.' + schemaName);
+                        //javaFileBuilder.addImportClass(modelPackage + '.' + schemaName);
                         var schemaFields = schemas.get(schemaName);
                         List<String> values = new ArrayList<>();
                         schemaFields.asJsonObject().values().forEach(value -> {
                             if (value.asJsonObject().containsKey(OPEN_API_EXAMPLES)) {
-
-                                values.add(((JsonString) value.asJsonObject().getJsonArray(
-                                    OPEN_API_EXAMPLES).stream().findAny().get()).getString());
+                                value.asJsonObject().getJsonArray(OPEN_API_EXAMPLES).stream()
+                                    .map(val -> ((JsonString) val).getString())
+                                    .findAny()
+                                    .ifPresent(values::add);
                             }
                         });
                         var constructorsParameters = String.join(COMMA_SPACE, values);
@@ -327,28 +364,46 @@ public class RestAdapterHandler {
         });
     }
 
-    private JsonObjectBuilder convertParamsToList(List<Parameter> parameters,
-                                                  String resourceName) {
-        var params = Json.createObjectBuilder();
+    private Collection<ParameterDefinition> convertParamsToList(List<Parameter> parameters,
+                                                                String resourceName,
+                                                                MethodDefinitionBuilder methodDefinitionBuilder) {
+        ParameterDefinitionBuilder parameterDefinitionBuilder = ParameterDefinitionBuilder.newBuilder();
         Optional.ofNullable(parameters).
             ifPresent(parametersList -> parametersList.forEach(parameter -> {
-                String entryName = parameter.getName();
-                String type
-                    = OpenApiUtil.openApiType2JavaType(OpenApiUtil.getType(parameter.getSchema()));
-                var paramDetail = Json.createObjectBuilder(
-                    Map.of(
-                        OPEN_API_TYPE, type,
-                        OPEN_API_IN,
-                        StringUtils.defaultIfEmpty(parameter.getIn(), OPEN_API_IN_QUERY)
-                    )
+            String entryName = parameter.getName();
+            String type
+                = OpenApiUtil.openApiType2JavaType(OpenApiUtil.getType(parameter.getSchema()));
+            if (StringUtils.equals(parameter.getIn(), OPEN_API_IN_PATH)) {
+                methodDefinitionBuilder.addAnnotationType(
+                    AnnotationTypeBuilder.newBuilder()
+                        .addAttribute("value", resourceName)
+                        .classType(
+                            ClassTypeBuilder.newBuilder()
+                                .className("Path")
+                                .packageName("jakarta.ws.rs")
+                                .build()
+                        )
+                        .build()
                 );
-                if (StringUtils.equals(parameter.getIn(), OPEN_API_IN_PATH)) {
-                    paramDetail.add(PATH_PARAM, resourceName);
-                }
-                params.add(entryName, paramDetail);
+                parameterDefinitionBuilder.addAnnotation(
+                    AnnotationTypeBuilder.newBuilder()
+                        .classType(
+                            ClassTypeBuilder.newBuilder()
+                                .packageName("jakarta.ws.rs")
+                                .className("PathParam")
+                                .build()
+                        )
+                        .addAttribute("value", entryName)
+                        .build()
+                );
 
-            }));
-        return params;
+            }
+            parameterDefinitionBuilder.parameterName(entryName)
+                .parameterType(NativeTypeBuilder.newBuilder().name(type).build());
+            //params.put(entryName, paramDetail);
+
+        }));
+        return Set.of(parameterDefinitionBuilder.build());
     }
 
     public void setModelPackage(JsonObject projectInfo) {
