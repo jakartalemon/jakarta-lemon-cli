@@ -109,18 +109,17 @@ public class DomainModuleHandler {
         "double", "Double",
         "boolean", "Boolean",
         "char", "Character",
-        "String",
-    };
+        "String",};
 
     public static DomainModuleHandler getInstance() {
         return DomainModuleHandlerHolder.INSTANCE;
     }
 
     public static Optional<Path> createDomainModule(Path projectPath,
-                                                    String groupId,
-                                                    String artifactId,
-                                                    String version,
-                                                    String packageName) {
+        String groupId,
+        String artifactId,
+        String version,
+        String packageName) {
 
         var modulePom = PomModel.builder().parent(Map.of(
             GROUP_ID, groupId,
@@ -160,8 +159,8 @@ public class DomainModuleHandler {
     }
 
     public void createUseCaseTestClass(JsonObject projectInfo,
-                                       String className,
-                                       JsonObject classDefinition) {
+        String className,
+        JsonObject classDefinition) {
         try {
             var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, USECASE);
             var repositoryPackageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, REPOSITORY);
@@ -186,20 +185,20 @@ public class DomainModuleHandler {
             List<FieldDefinitionBuilder.FieldDefinition> fieldsDefinition = classDefinition.getJsonArray(INJECTS)
                 .stream()
                 .map(jsonValue -> ((JsonString) jsonValue).getString()).map(
-                    repositoryInject -> FieldDefinitionBuilder.createBuilder()
-                        .addModifier(Modifier.PRIVATE)
-                        .addAnnotationType(mockAnnotation)
-                        .fieldName(
-                            StringUtils.uncapitalize(
-                                repositoryInject))
-                        .classType(
-                            ClassTypeBuilder.newBuilder()
-                                .className(repositoryInject)
-                                .packageName(repositoryPackageName)
-                                .build()
-                        )
-                        .build()
-                )
+                repositoryInject -> FieldDefinitionBuilder.createBuilder()
+                    .addModifier(Modifier.PRIVATE)
+                    .addAnnotationType(mockAnnotation)
+                    .fieldName(
+                        StringUtils.uncapitalize(
+                            repositoryInject))
+                    .classType(
+                        ClassTypeBuilder.newBuilder()
+                            .className(repositoryInject)
+                            .packageName(repositoryPackageName)
+                            .build()
+                    )
+                    .build()
+            )
                 .collect(toList());
             //add current service
             fieldsDefinition.add(
@@ -239,8 +238,8 @@ public class DomainModuleHandler {
     }
 
     public void createUseCaseClass(JsonObject projectInfo,
-                                   String className,
-                                   JsonObject classDefinition) {
+        String className,
+        JsonObject classDefinition) {
         try {
             log.info("Creating {} use case class", className);
             var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, USECASE);
@@ -248,19 +247,19 @@ public class DomainModuleHandler {
             Collection<FieldDefinitionBuilder.FieldDefinition> fieldsDefinition = getClassesInject(projectInfo,
                 classDefinition)
                 .stream().map(classType -> FieldDefinitionBuilder.createBuilder()
-                    .addModifier(Modifier.PRIVATE)
-                    .fieldName(StringUtils.uncapitalize(classType.getClassName()))
-                    .classType(classType)
-                    .build()).collect(toList());
+                .addModifier(Modifier.PRIVATE)
+                .fieldName(StringUtils.uncapitalize(classType.getClassName()))
+                .classType(classType)
+                .build()).collect(toList());
             Collection<MethodDefinitionBuilder.MethodDefinition> methodsDefinitions = classDefinition.getJsonObject(
-                    METHODS)
+                METHODS)
                 .entrySet().stream().map(methodEntry -> {
                     var methodContent = methodEntry.getValue().asJsonObject();
 
                     var methodDefinitionBuilder
                         = MethodDefinitionBuilder.createBuilder()
-                        .name(methodEntry.getKey())
-                        .addModifier(Modifier.PUBLIC);
+                            .name(methodEntry.getKey())
+                            .addModifier(Modifier.PUBLIC);
                     if (methodContent.containsKey(RETURN)) {
                         var returnValue = methodContent.getString(RETURN).split(COLON);
                         var returnType = returnValue[0];
@@ -356,7 +355,8 @@ public class DomainModuleHandler {
         try {
             log.info("Creating {} class", className);
             AtomicReference<String> primaryKeyTypeRef = new AtomicReference<>();
-            var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, MODEL);
+            var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), DOMAIN, MODEL);            
+
             var fields = classDef.getJsonObject(FIELDS)
                 .entrySet()
                 .stream()
@@ -392,8 +392,8 @@ public class DomainModuleHandler {
 
             var destinationPath = Paths.get(projectInfo.getString(DOMAIN), SRC, MAIN, JAVA);
             var javaFile = JavaFileBuilder.createBuilder(definition, destinationPath).build();
-            javaFile.writeFile();
-
+            javaFile.writeFile(); 
+            
             createRepository(projectInfo);
 
             Optional.ofNullable(primaryKeyTypeRef.get()).ifPresent(primaryKeyType -> {
@@ -418,9 +418,9 @@ public class DomainModuleHandler {
             DOMAIN, REPOSITORY);
         return classDefinition.getJsonArray(INJECTS).stream().map(jsonValue -> (JsonString) jsonValue)
             .map(itemClassInject -> ClassTypeBuilder.newBuilder()
-                .className(itemClassInject.getString())
-                .packageName(packageName)
-                .build()).collect(toList());
+            .className(itemClassInject.getString())
+            .packageName(packageName)
+            .build()).collect(toList());
     }
 
     private boolean isNativeType(String typeName) {
