@@ -58,34 +58,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
-import static dev.jakartalemon.cli.util.Constants.COLON;
-import static dev.jakartalemon.cli.util.Constants.DOMAIN;
-import static dev.jakartalemon.cli.util.Constants.DOT;
-import static dev.jakartalemon.cli.util.Constants.FIELDS;
-import static dev.jakartalemon.cli.util.Constants.FINDERS;
-import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
-import static dev.jakartalemon.cli.util.Constants.INJECTS;
-import static dev.jakartalemon.cli.util.Constants.JAR;
-import static dev.jakartalemon.cli.util.Constants.JAVA;
-import static dev.jakartalemon.cli.util.Constants.JAVA_VERSION;
-import static dev.jakartalemon.cli.util.Constants.LOMBOK_DEPENDENCY;
-import static dev.jakartalemon.cli.util.Constants.MAIN;
-import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_RELEASE;
-import static dev.jakartalemon.cli.util.Constants.METHODS;
-import static dev.jakartalemon.cli.util.Constants.MOCKITO_DEPENDENCY;
-import static dev.jakartalemon.cli.util.Constants.MODEL;
-import static dev.jakartalemon.cli.util.Constants.PACKAGE;
-import static dev.jakartalemon.cli.util.Constants.PACKAGE_TEMPLATE;
-import static dev.jakartalemon.cli.util.Constants.PARAMETERS;
-import static dev.jakartalemon.cli.util.Constants.PRIMARY_KEY;
-import static dev.jakartalemon.cli.util.Constants.REPOSITORY;
-import static dev.jakartalemon.cli.util.Constants.RETURN;
-import static dev.jakartalemon.cli.util.Constants.SRC;
-import static dev.jakartalemon.cli.util.Constants.TEMPLATE_2_STRING_COMMA;
-import static dev.jakartalemon.cli.util.Constants.TEST;
-import static dev.jakartalemon.cli.util.Constants.USECASE;
-import static dev.jakartalemon.cli.util.Constants.VERSION;
+import static dev.jakartalemon.cli.util.Constants.*;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANNOTATION_API_VERSION_KEY;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.util.Collection;
@@ -117,7 +91,15 @@ public class DomainModuleHandler {
             ARTIFACT_ID, artifactId,
             VERSION, version
         )).packaging(JAR).dependencies(List.of(
-            LOMBOK_DEPENDENCY, MOCKITO_DEPENDENCY
+            LOMBOK_DEPENDENCY, MOCKITO_DEPENDENCY, Map.of(
+                        GROUP_ID, JAKARTA_ENTERPRISE,
+                        ARTIFACT_ID, JAKARTA_CDI_API,
+                        VERSION, "${%s}".formatted(JAKARTA_CDI_API_VERSION_KEY)
+                ), Map.of(
+                        GROUP_ID, JAKARTA_ANNOTATION,
+                        ARTIFACT_ID, JAKARTA_ANNOTATION_API,
+                        VERSION, "${%s}".formatted(JAKARTA_ANNOTATION_API_VERSION_KEY)
+                )
         )).properties(Map.of(
             MAVEN_COMPILER_RELEASE, JAVA_VERSION
         )).artifactId(DOMAIN);
@@ -301,10 +283,18 @@ public class DomainModuleHandler {
                     });
                     return methodDefinitionBuilder.build();
                 }).collect(toList());
-
+            var applicationScopedAnnotation = AnnotationTypeBuilder.newBuilder()
+                .classType(
+                    ClassTypeBuilder.newBuilder()
+                        .className("ApplicationScoped")
+                        .packageName("jakarta.enterprise.context")
+                        .build()
+                )
+                .build();
             var useClassDefinition = DefinitionBuilder
                 .createClassBuilder(packageName, className)
                 .addMethods(methodsDefinitions)
+                .addAnnotationType(applicationScopedAnnotation)
                 .addFields(fieldsDefinition)
                 .addModifier(Modifier.PUBLIC)
                 .build();

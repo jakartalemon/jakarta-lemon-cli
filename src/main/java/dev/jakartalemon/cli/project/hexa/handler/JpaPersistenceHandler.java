@@ -124,9 +124,19 @@ public class JpaPersistenceHandler {
                 .className("EntityManager")
                 .packageName("jakarta.persistence")
                 .build();
+            
+            var applicationScopedAnnotation = AnnotationTypeBuilder.newBuilder()
+                .classType(
+                    ClassTypeBuilder.newBuilder()
+                        .className("ApplicationScoped")
+                        .packageName("jakarta.enterprise.context")
+                        .build()
+                )
+                .build();
 
             var repositoryDefinition = DefinitionBuilder.createClassBuilder(packageName, modelName + "RepositoryImpl")
                 .addInterfaceImplements(repositoryClassType)
+                .addAnnotationType(applicationScopedAnnotation)
                 .addModifier(Modifier.PUBLIC)
                 .addField(
                     FieldDefinitionBuilder.createBuilder()
