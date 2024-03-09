@@ -26,6 +26,7 @@ import com.camucode.gen.type.ClassType;
 import com.camucode.gen.type.ClassTypeBuilder;
 import com.camucode.gen.type.JavaType;
 import com.camucode.gen.type.NativeTypeBuilder;
+import com.camucode.gen.util.ClassUtil;
 
 import static com.camucode.gen.util.ClassUtil.removeClassFromPackage;
 import static com.camucode.gen.util.Constants.GENERAL_CLASSES;
@@ -100,16 +101,6 @@ import static org.apache.commons.lang3.StringUtils.EMPTY;
 @Slf4j
 public class DomainModuleHandler {
 
-    private static final String[] NATIVE_TYPES = {
-        "byte", "Byte",
-        "short", "Short",
-        "int", "Integer",
-        "long", "Long",
-        "float", "Float",
-        "double", "Double",
-        "boolean", "Boolean",
-        "char", "Character",
-        "String",};
 
     public static DomainModuleHandler getInstance() {
         return DomainModuleHandlerHolder.INSTANCE;
@@ -215,6 +206,10 @@ public class DomainModuleHandler {
                     )
                     .build()
             );
+            var mockitoExtensionClass=ClassTypeBuilder.newBuilder()
+                .className("MockitoExtension")
+                .packageName("org.mockito.junit.jupiter")
+                .build();
             var extendWithAnnotation = AnnotationTypeBuilder.newBuilder()
                 .classType(
                     ClassTypeBuilder.newBuilder()
@@ -222,6 +217,7 @@ public class DomainModuleHandler {
                         .className("ExtendWith")
                         .build()
                 )
+                .addAttribute("value", mockitoExtensionClass)
                 .build();
             var definition = DefinitionBuilder.createClassBuilder(packageName, classTestName)
                 .addModifier(Modifier.PUBLIC)
@@ -424,7 +420,7 @@ public class DomainModuleHandler {
     }
 
     private boolean isNativeType(String typeName) {
-        return ArrayUtils.contains(NATIVE_TYPES, typeName);
+        return ArrayUtils.contains(ClassUtil.NATIVE_TYPES, typeName);
     }
 
     private String getType(JsonValue jsonValue) {
