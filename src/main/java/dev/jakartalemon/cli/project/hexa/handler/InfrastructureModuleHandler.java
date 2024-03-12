@@ -61,11 +61,16 @@ import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANNOTATION_API_VERSION
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_CDI_API;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_CDI_API_VERSION_KEY;
 import static dev.jakartalemon.cli.util.Constants.JAKARTA_ENTERPRISE;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_PERSISTENCE;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_PERSISTENCE_API;
+import static dev.jakartalemon.cli.util.Constants.JAKARTA_PERSISTENCE_API_VERSION_KEY;
 import static dev.jakartalemon.cli.util.Constants.JAR;
 import static dev.jakartalemon.cli.util.Constants.JAVA;
 import static dev.jakartalemon.cli.util.Constants.LOMBOK_DEPENDENCY;
 import static dev.jakartalemon.cli.util.Constants.MAIN;
 import static dev.jakartalemon.cli.util.Constants.MAPPER;
+import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_PLUGIN;
+import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_PLUGIN_VERSION;
 import static dev.jakartalemon.cli.util.Constants.META_INF;
 import static dev.jakartalemon.cli.util.Constants.MOCKITO_DEPENDENCY;
 import static dev.jakartalemon.cli.util.Constants.MODEL;
@@ -103,14 +108,14 @@ public class InfrastructureModuleHandler {
     }
 
     private void createDataSourceClass(JsonObject projectInfo,
-                                       String dataSourceClass,
-                                       JsonObject connectionInfo) {
+        String dataSourceClass,
+        JsonObject connectionInfo) {
         try {
             this.dataSourceName = "java:global/App/Datasource";
             List<String> lines = new ArrayList<>();
             var packageName
                 = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), INFRASTRUCTURE,
-                ADAPTERS);
+                    ADAPTERS);
             lines.add(TEMPLATE_2_STRING_COMMA.formatted(PACKAGE, packageName));
             lines.add(EMPTY);
             lines.add("import jakarta.annotation.sql.DataSourceDefinition;");
@@ -123,7 +128,7 @@ public class InfrastructureModuleHandler {
             props.forEach(prop -> {
                 if (connectionInfo.containsKey(prop)) {
                     lines.add("%s%s = \"%s\",".formatted(StringUtils.repeat(SPACE,
-                            TAB_SIZE), prop,
+                        TAB_SIZE), prop,
                         connectionInfo.getString(prop)));
                 }
             });
@@ -147,36 +152,36 @@ public class InfrastructureModuleHandler {
     public void createDatabaseConfig(File file) {
         JsonFileUtil.getFileJson(file.toPath())
             .ifPresent(config -> JsonFileUtil.getProjectInfo().ifPresent(projectInfo -> {
-                try {
-                    var storageType = config.getString("storageType");
-                    var configDb = databasesConfigs.getJsonObject(storageType);
-                    log.debug("storageType:{}", storageType);
-                    log.debug("configDb:{}", configDb);
+            try {
+                var storageType = config.getString("storageType");
+                var configDb = databasesConfigs.getJsonObject(storageType);
+                log.debug("storageType:{}", storageType);
+                log.debug("configDb:{}", configDb);
 
-                    DependenciesUtil.getLastVersionDependency(configDb.getString(
-                        "search")).ifPresent(dependency -> PomUtil.getInstance()
-                        .addDependency(dependency, INFRASTRUCTURE));
-                    var dataSourceClass = configDb.getString("datasource");
-                    var connectionInfo = config.getJsonObject("connectionInfo");
-                    var connectionType = config.getString("connectionType");
-                    switch (connectionType) {
-                        case "DataSourceEmbedded" ->
-                            createDataSourceClass(projectInfo, dataSourceClass, connectionInfo);
-                    }
-
-                } catch (InterruptedException | IOException | URISyntaxException e) {
-                    log.error(e.getMessage(), e);
-
+                DependenciesUtil.getLastVersionDependency(configDb.getString(
+                    "search")).ifPresent(dependency -> PomUtil.getInstance()
+                    .addDependency(dependency, INFRASTRUCTURE));
+                var dataSourceClass = configDb.getString("datasource");
+                var connectionInfo = config.getJsonObject("connectionInfo");
+                var connectionType = config.getString("connectionType");
+                switch (connectionType) {
+                    case "DataSourceEmbedded" ->
+                        createDataSourceClass(projectInfo, dataSourceClass, connectionInfo);
                 }
-            }));
+
+            } catch (InterruptedException | IOException | URISyntaxException e) {
+                log.error(e.getMessage(), e);
+
+            }
+        }));
 
     }
 
     public static Optional<Path> createInfrastructureModule(Path projectPath,
-                                                            String groupId,
-                                                            String artifactId,
-                                                            String version,
-                                                            String packageName) {
+        String groupId,
+        String artifactId,
+        String version,
+        String packageName) {
         var modulePom = PomModel.builder()
             .parent(Map.of(GROUP_ID, groupId,
                 ARTIFACT_ID, artifactId,
@@ -198,22 +203,26 @@ public class InfrastructureModuleHandler {
                         ARTIFACT_ID, DOMAIN,
                         VERSION, PROJECT_VERSION
                     ), Map.of(
-                        GROUP_ID, JAKARTA_ENTERPRISE,
-                        ARTIFACT_ID, JAKARTA_CDI_API,
-                        VERSION, "${%s}".formatted(JAKARTA_CDI_API_VERSION_KEY)
-                    ), Map.of(
-                        GROUP_ID, JAKARTA_ANNOTATION,
-                        ARTIFACT_ID, JAKARTA_ANNOTATION_API,
-                        VERSION, "${%s}".formatted(JAKARTA_ANNOTATION_API_VERSION_KEY)
-                    ))
+                    GROUP_ID, JAKARTA_ENTERPRISE,
+                    ARTIFACT_ID, JAKARTA_CDI_API,
+                    VERSION, "${%s}".formatted(JAKARTA_CDI_API_VERSION_KEY)
+                ), Map.of(
+                    GROUP_ID, JAKARTA_ANNOTATION,
+                    ARTIFACT_ID, JAKARTA_ANNOTATION_API,
+                    VERSION, "${%s}".formatted(JAKARTA_ANNOTATION_API_VERSION_KEY)
+                ), Map.of(
+                    GROUP_ID, JAKARTA_PERSISTENCE,
+                    ARTIFACT_ID, JAKARTA_PERSISTENCE_API,
+                    VERSION, "${%s}".formatted(JAKARTA_PERSISTENCE_API_VERSION_KEY)
+                ))
             ).buildModel(
                 BuildModel.builder()
                     .plugins(Json.createArrayBuilder()
                         .add(
                             Json.createObjectBuilder()
                                 .add(GROUP_ID, "org.apache.maven.plugins")
-                                .add(ARTIFACT_ID, "maven-compiler-plugin")
-                                .add(VERSION, "3.11.0")
+                                .add(ARTIFACT_ID, MAVEN_COMPILER_PLUGIN)
+                                .add(VERSION, MAVEN_COMPILER_PLUGIN_VERSION)
                                 .add("configuration", Json.createObjectBuilder()
                                     .add("annotationProcessorPaths",
                                         Json.createObjectBuilder()
@@ -251,7 +260,7 @@ public class InfrastructureModuleHandler {
             documentElement.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
             documentElement.setAttribute("xsi:schemaLocation",
                 "http://java.sun.com/xml/ns/javaee http://java.sun"
-                    + ".com/xml/ns/javaee/beans_1_0.xsd");
+                + ".com/xml/ns/javaee/beans_1_0.xsd");
             documentElement.setTextContent(SPACE);
             var descriptorPath = Paths.get(modulePath, SRC, MAIN, RESOURCES, META_INF, "beans.xml");
             Files.createDirectories(descriptorPath.getParent());
@@ -262,7 +271,7 @@ public class InfrastructureModuleHandler {
     }
 
     public void createMapper(JsonObject projectInfo, String modelName,
-                             String entityName) {
+        String entityName) {
         try {
             var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), INFRASTRUCTURE,
                 MAPPER);
@@ -309,8 +318,8 @@ public class InfrastructureModuleHandler {
                 .build();
 
             var mapperDefinition = DefinitionBuilder.createInterfaceBuilder(
-                    packageName,
-                    mapperName)
+                packageName,
+                mapperName)
                 .addField(FieldDefinitionBuilder.createBuilder()
                     .fieldName("INSTANCE")
                     .classType(mapper)

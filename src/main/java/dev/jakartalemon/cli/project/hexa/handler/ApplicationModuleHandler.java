@@ -39,6 +39,8 @@ import java.util.Optional;
 import static dev.jakartalemon.cli.util.Constants.APPLICATION;
 import static dev.jakartalemon.cli.util.Constants.JAVA;
 import static dev.jakartalemon.cli.util.Constants.MAIN;
+import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_PLUGIN;
+import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_PLUGIN_VERSION;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_JAKARTA_WS_RS_API;
 import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_RXJAVA;
 import static dev.jakartalemon.cli.util.Constants.MODEL;
@@ -62,15 +64,15 @@ public class ApplicationModuleHandler {
     }
 
     public void createRecords(JsonObject definitions,
-                              JsonObject projectInfo) {
+        JsonObject projectInfo) {
         definitions.forEach(
             (className, properties) -> createRecord(className, properties.asJsonObject(),
                 projectInfo));
     }
 
     private void createRecord(String className,
-                              JsonObject properties,
-                              JsonObject projectInfo) {
+        JsonObject properties,
+        JsonObject projectInfo) {
         try {
             var packageName = PACKAGE_TEMPLATE.formatted(projectInfo.getString(PACKAGE), APPLICATION,
                 MODEL);
@@ -94,15 +96,15 @@ public class ApplicationModuleHandler {
     }
 
     public Optional<Path> createApplicationModule(Path projectPath,
-                                                  String groupId,
-                                                  String artifactId,
-                                                  String version) {
+        String groupId,
+        String artifactId,
+        String version) {
         PomModel.PomModelBuilder modulePom = PomModel.builder().parent(
-                Map.of(
-                    Constants.GROUP_ID, groupId,
-                    Constants.ARTIFACT_ID, artifactId,
-                    Constants.VERSION, version)
-            ).artifactId(Constants.APPLICATION)
+            Map.of(
+                Constants.GROUP_ID, groupId,
+                Constants.ARTIFACT_ID, artifactId,
+                Constants.VERSION, version)
+        ).artifactId(Constants.APPLICATION)
             .packaging(Constants.WAR)
             .properties(
                 Map.of(
@@ -118,7 +120,8 @@ public class ApplicationModuleHandler {
                         Constants.VERSION, Constants.PROJECT_VERSION
                     ),
                     Constants.JAKARTA_INJECT_DEPENDENCY,
-                    Constants.INFRASTRUCTURE_DEPENDENCY
+                    Constants.INFRASTRUCTURE_DEPENDENCY,
+                    Constants.JAX_RS_DEPENDENCY
                 )
             ).buildModel(
                 BuildModel.builder()
@@ -127,8 +130,8 @@ public class ApplicationModuleHandler {
                             .add(
                                 Json.createObjectBuilder()
                                     .add(Constants.GROUP_ID, "org.apache.maven.plugins")
-                                    .add(Constants.ARTIFACT_ID, "maven-compiler-plugin")
-                                    .add(Constants.VERSION, "3.11.0")
+                                    .add(Constants.ARTIFACT_ID, MAVEN_COMPILER_PLUGIN)
+                                    .add(Constants.VERSION, MAVEN_COMPILER_PLUGIN_VERSION)
                                     .add(Constants.CONFIGURATION, Json.createObjectBuilder().add(
                                         "compilerArguments", Json.createObjectBuilder()
                                             .add("endorseddirs", "${endorsed.dir}")))

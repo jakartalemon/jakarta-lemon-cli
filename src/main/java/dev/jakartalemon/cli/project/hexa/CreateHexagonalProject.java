@@ -32,23 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static dev.jakartalemon.cli.util.Constants.*;
 import static dev.jakartalemon.cli.util.Constants.Archetype.HEXA;
-import static dev.jakartalemon.cli.util.Constants.APPLICATION;
-import static dev.jakartalemon.cli.util.Constants.ARTIFACT_ID;
-import static dev.jakartalemon.cli.util.Constants.DOMAIN;
-import static dev.jakartalemon.cli.util.Constants.GROUP_ID;
-import static dev.jakartalemon.cli.util.Constants.INFRASTRUCTURE;
-import static dev.jakartalemon.cli.util.Constants.JAKARTA_ANNOTATION_API_VERSION_KEY;
-import static dev.jakartalemon.cli.util.Constants.JAKARTA_CDI_API_VERSION_KEY;
-import static dev.jakartalemon.cli.util.Constants.JAKARTA_SERVLET_VERSION_KEY;
-import static dev.jakartalemon.cli.util.Constants.JAKARTA_WS_RS_API_VERSION_KEY;
-import static dev.jakartalemon.cli.util.Constants.JAVA_VERSION;
-import static dev.jakartalemon.cli.util.Constants.MAVEN_COMPILER_RELEASE;
-import static dev.jakartalemon.cli.util.Constants.MAVEN_QUERY_LOMBOK;
-import static dev.jakartalemon.cli.util.Constants.PACKAGE;
-import static dev.jakartalemon.cli.util.Constants.POM;
-import static dev.jakartalemon.cli.util.Constants.PROJECT_LOMBOK_VERSION_KEY;
-import static dev.jakartalemon.cli.util.Constants.VERSION;
 
 /**
  * @author Diego Silva <diego.silva at apuntesdejava.com>
@@ -81,16 +66,16 @@ public class CreateHexagonalProject {
         var projectPom = PomModel.builder().groupId(groupId).artifactId(artifactId).version(version)
             .packaging(POM)
             .modules(List.of(DOMAIN, APPLICATION, INFRASTRUCTURE))
-            .properties(Map.of(
-                "project.build.sourceEncoding", "UTF-8",
+            .properties(Map.of("project.build.sourceEncoding", "UTF-8",
                 MAVEN_COMPILER_RELEASE, JAVA_VERSION,
-                "mockito.junit.jupiter.version", "5.4.0",
-                "org.mapstruct.version", "1.5.5.Final",
+                MOCKITO_JUNIT_JUPITER_VERSION_KEY, MOCKITO_JUNIT_JUPITER_VERSION,
+                ORG_MAPSTRUCT_VERSION_KEY, "1.5.5.Final",
                 JAKARTA_CDI_API_VERSION_KEY, "4.0.1",
                 JAKARTA_ANNOTATION_API_VERSION_KEY, "2.1.0",
-                JAKARTA_WS_RS_API_VERSION_KEY, "3.1.0",
+                JAKARTA_WS_RS_API_VERSION_KEY, JAKARTA_WS_RS_API_VERSION,
                 JAKARTA_SERVLET_VERSION_KEY, "6.0.0",
-                PROJECT_LOMBOK_VERSION_KEY, lombokVersion
+                PROJECT_LOMBOK_VERSION_KEY, lombokVersion,
+                JAKARTA_PERSISTENCE_API_VERSION_KEY,JAKARTA_PERSISTENCE_API_VERSION
             ));
         PomUtil.getInstance().createPom(projectPath, projectPom.build());
 

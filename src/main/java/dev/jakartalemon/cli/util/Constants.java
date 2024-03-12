@@ -91,6 +91,9 @@ public class Constants {
     public static final String DEPENDENCY = "dependency";
     public static final String PLUGIN = "plugin";
     public static final String PROJECT_INFO_JSON = "project_info.json";
+    public static final String MOCKITO_JUNIT_JUPITER_VERSION_KEY = "mockito.junit.jupiter.version";
+    public static final String MOCKITO_JUNIT_JUPITER_VERSION = "5.11.0";
+    public static final String ORG_MAPSTRUCT_VERSION_KEY = "org.mapstruct.version";
     public static final Map<String, String> LOMBOK_DEPENDENCY = Map.of(
         GROUP_ID, "org.projectlombok",
         ARTIFACT_ID, "lombok",
@@ -113,6 +116,7 @@ public class Constants {
         ARTIFACT_ID, INFRASTRUCTURE,
         VERSION, PROJECT_VERSION
     );
+
     public static final String DOCS = "docs";
     public static final String DOT = ".";
     public static final String DEPENDENCY_GROUP_ID = "groupId";
@@ -166,10 +170,15 @@ public class Constants {
     public static final String JAKARTA_WS_RS = "jakarta.ws.rs";
     public static final String JAKARTA_WS_RS_API = "jakarta.ws.rs-api";
     public static final String JAKARTA_WS_RS_API_VERSION_KEY = "jakarta.ws.rs-api.version";
+    public static final String JAKARTA_WS_RS_API_VERSION = "3.1.0";
     public static final String JAKARTA_SERVLET = "jakarta.servlet";
     public static final String JAKARTA_SERVLET_VERSION_KEY = "jakarta.servlet.version";
     public static final String PROJECT_LOMBOK_VERSION_KEY = "org.projectlombok.version";
-
+    public static final Map<String, String> JAX_RS_DEPENDENCY = Map.of(
+        GROUP_ID, JAKARTA_WS_RS,
+        ARTIFACT_ID, JAKARTA_WS_RS_API,
+        VERSION, "${%s}".formatted(JAKARTA_WS_RS_API_VERSION_KEY)
+    );
     public static final char SLASH_CHAR = '/';
     public static final char DOUBLE_QUOTES_CHAR = '"';
     public static final String PATH_PARAM = "path";
@@ -186,6 +195,12 @@ public class Constants {
     public static final String OPEN_API_EXAMPLES = "examples";
     public static final String OPEN_API_TYPES = "types";
     public static final String ANNOTATION_FIELD = "annotation";
+    public static final String MAVEN_COMPILER_PLUGIN = "maven-compiler-plugin";
+    public static final String MAVEN_COMPILER_PLUGIN_VERSION = "3.12.1";
+    public static final String JAKARTA_PERSISTENCE = "jakarta.persistence";
+    public static final String JAKARTA_PERSISTENCE_API = "jakarta.persistence-api";
+    public static final String JAKARTA_PERSISTENCE_API_VERSION = "3.1.0";
+    public static final String JAKARTA_PERSISTENCE_API_VERSION_KEY = "jakarta.persistence-api.version";
 
     private Constants() {
     }
